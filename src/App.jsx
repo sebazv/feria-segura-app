@@ -1,11 +1,27 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
-import Home from './pages/Home';
-import Confirmation from './pages/Confirmation';
-import News from './pages/News';
-import Profile from './pages/Profile';
+import { useStore } from './store';
+
+// Original pages
+import OriginalHome from './pages/original/Home';
+import OriginalConfirmation from './pages/original/Confirmation';
+import OriginalNews from './pages/original/News';
+import OriginalProfile from './pages/original/Profile';
+
+// Stitch pages
+import StitchHome from './pages/stitch/Home';
+import StitchConfirmation from './pages/stitch/Confirmation';
+import StitchNews from './pages/stitch/News';
+import StitchProfile from './pages/stitch/Profile';
 
 export default function App() {
+  const { useStitchUI } = useStore();
+
+  const Home = useStitchUI ? StitchHome : OriginalHome;
+  const Confirmation = useStitchUI ? StitchConfirmation : OriginalConfirmation;
+  const News = useStitchUI ? StitchNews : OriginalNews;
+  const Profile = useStitchUI ? StitchProfile : OriginalProfile;
+
   return (
     <Router>
       <Routes>
@@ -19,7 +35,6 @@ export default function App() {
         <Route element={<Layout hideNav={true} />}>
           <Route path="/confirmation" element={<Confirmation />} />
         </Route>
-
       </Routes>
     </Router>
   );

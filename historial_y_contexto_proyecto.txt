@@ -1,0 +1,37 @@
+# Contexto y Plan de Trabajo: App Botón de Pánico Feria (Feria Segura)
+
+## 1. Contexto del Proyecto
+La aplicación "Feria Segura" (también conocida como App Botón de Pánico Feria) es una Progressive Web App (PWA) diseñada para ofrecer un sistema de alertas en tiempo real y asistencia rápida durante ferias y eventos. La aplicación permite a los usuarios acceder de manera ágil a un botón de pánico, categorizar la emergencia, y notificar al personal de seguridad correspondiente.
+
+**Tecnologías Utilizadas:**
+- React 19 con Vite como empaquetador.
+- Tailwind CSS v4 para el estilo y maquetación de la interfaz.
+- Zustand para la gestión de estado global de la aplicación.
+- Firebase v12 para autenticación, base de datos en tiempo real (o Firestore) y alojamiento.
+- `vite-plugin-pwa` para el soporte de aplicación progresiva y uso offline/instalación móvil.
+- `lucide-react` para iconografía.
+
+## 2. Historial de Creación y Desarrollo
+A lo largo de nuestras sesiones de creación, hemos abordado los siguientes hitos principales:
+
+### a. Desarrollo y Pruebas del Botón SOS
+- **Funcionalidad principal:** Se implementó el botón centralizado de SOS con un mecanismo de activación basado en tiempo (presionar y sostener para evitar alertas accidentales).
+- **Categorización:** Al activar, el usuario puede tipificar o categorizar el tipo de emergencia en el momento.
+- **Flujo de Acceso (Login):** Se desarrolló y refinó la experiencia de ingreso a la aplicación para asegurar que los usuarios estén autenticados antes de emitir alertas.
+
+### b. Cambio Dinámico de Interfaces (UI Version Switching)
+- Integramos un sistema para cambiar dinámicamente entre dos versiones de la interfaz gráfica: la *UI Original* y una *UI Generada (Stitch)*.
+- Esto requirió modificar el estado de Zustand e implementar una lógica de enrutamiento condicional (Conditional Routing), permitiendo verificar la usabilidad y preferencia del usuario.
+
+### c. Arquitectura Modular y Configuraciones
+- **Barra de Navegación (BottomNav):** Controla el flujo principal adaptándose al entorno móvil.
+- **Configuración CSS y Vite:** Resolvimos alertas de CSS modernas integrando Tailwind correctamente en `index.css` y asegurando una buena configuración PWA en `vite.config.js`.
+
+## 3. Plan de Trabajo Futuro (Próximos Pasos para Distribuidores)
+- **Refinamiento de Roles:** Terminar de definir permisos (guardias, coordinadores, usuarios estándar) en Firebase Rules y la lógica de validación interna.
+- **Despliegue y Monitoreo:** Finalizar pruebas de las Service Workers para asegurar la estabilidad offline de funciones críticas.
+- **Auditoría de UX/UI:** Recopilar feedback real de la vista condicional implementada (Original vs. Stitch) y consolidar un único diseño ganador.
+- **Integración con Sistemas Externos:** Posible vinculación del panel administrativo a sistemas de videovigilancia o redes de alerta comunitaria externa.
+
+---
+*Archivo generado automáticamente para integrar la base de código al repositorio de distribución Git.*

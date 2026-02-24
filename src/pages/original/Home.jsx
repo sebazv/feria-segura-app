@@ -1,13 +1,46 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert, Plus, Sun, Moon } from 'lucide-react';
-import { useStore } from '../store';
+import { useStore } from '../../store';
 
 export default function Home() {
     const navigate = useNavigate();
     const { darkMode, toggleDarkMode } = useStore();
 
-    const handleAlert = (type) => {
-        navigate(`/confirmation?type=${type}`);
+    const [loading, setLoading] = useState(false);
+
+    const handleAlert = async (type) => {
+        if (loading) return;
+        setLoading(true);
+
+        const buildPayloadAndDispatch = async (lat = 0, lng = 0) => {
+            const { reverseGeocode, sendAlertWebhook } = await import('../../lib/services');
+            const address = await reverseGeocode(lat, lng);
+
+            const payload = {
+                tipo_emergencia: type === 'insecurity' ? 'HECHO_INSEGURIDAD' : 'EMERGENCIA_MEDICA',
+                usuario_nombre: 'Feriante Demo',
+                usuario_telefono: '+56912345678',
+                puesto_numero: 'Puesto N°45',
+                direccion: address,
+                link_mapa: lat && lng ? `https://maps.google.com/?q=${lat},${lng}` : 'Sin GPS',
+                timestamp: new Date().toISOString()
+            };
+
+            await sendAlertWebhook(payload);
+            setLoading(false);
+            navigate(`/confirmation?type=${type}`);
+        };
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => buildPayloadAndDispatch(pos.coords.latitude, pos.coords.longitude),
+                (err) => buildPayloadAndDispatch(0, 0), // Fallback if no GPS access
+                { enableHighAccuracy: true, timeout: 5000 }
+            );
+        } else {
+            buildPayloadAndDispatch(0, 0); // Not supported
+        }
     };
 
     return (
@@ -24,14 +57,7 @@ export default function Home() {
                     </span>
                 </div>
 
-                {/* Toggle Theme */}
-                <button
-                    onClick={toggleDarkMode}
-                    className="absolute right-0 top-0 p-3 rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    aria-label="Alternar modo oscuro"
-                >
-                    {darkMode ? <Sun size={32} /> : <Moon size={32} />}
-                </button>
+
             </header>
 
             {/* Main Action Buttons */}

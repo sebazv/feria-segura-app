@@ -1,8 +1,8 @@
 import { User, Shield } from 'lucide-react';
-import { useStore } from '../store';
+import { useStore } from '../../store';
 
 export default function Profile() {
-    const { darkMode, toggleDarkMode } = useStore();
+    const { darkMode, toggleDarkMode, useStitchUI, toggleUI } = useStore();
 
     return (
         <div className="flex flex-col min-h-[calc(100vh-6rem)] relative w-full max-w-lg mx-auto p-4 sm:p-6 bg-white dark:bg-black pb-12">
@@ -37,6 +37,17 @@ export default function Profile() {
                     <div className={`w-16 h-8 rounded-full transition-colors flex items-center px-1 ${darkMode ? 'bg-[var(--color-brand-green)]' : 'bg-gray-400'}`}>
                         <div className={`w-6 h-6 bg-white rounded-full transition-transform ${darkMode ? 'translate-x-8' : 'translate-x-0'}`}></div>
                     </div>
+                </button>
+                <button
+                    onClick={toggleUI}
+                    className="w-full flex items-center justify-between p-6 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/50 rounded-2xl transition-colors"
+                >
+                    <span className="text-xl font-bold text-blue-800 dark:text-blue-200 flex items-center gap-3">
+                        Diseño Actual
+                    </span>
+                    <span className="px-3 py-1 bg-blue-600 text-white rounded font-bold text-sm">
+                        {useStitchUI ? 'Versión Stitch' : 'Versión Original'}
+                    </span>
                 </button>
 
                 <button className="w-full flex items-center justify-start p-6 bg-gray-100 dark:bg-gray-800 rounded-2xl text-2xl font-bold text-black dark:text-white mt-4 gap-4">

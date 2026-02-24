@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Feria Segura - SOS Screen</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#ec1313",
+              "medical": "#1b64da",
+              "success": "#16a34a",
+              "background-light": "#ffffff",
+              "background-dark": "#221010",
+            },
+            fontFamily: {
+              "display": ["Lexend", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 700, 'GRAD' 0, 'opsz' 48;
+            font-size: 80px !important;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased select-none">
+<div class="relative flex h-screen w-full flex-col overflow-hidden pb-safe">
+<!-- Header Section -->
+<header class="flex flex-col items-center pt-12 pb-6 px-6 bg-white dark:bg-background-dark">
+<h1 class="text-slate-900 dark:text-slate-100 text-4xl font-bold tracking-tight mb-3">
+                Feria Segura
+            </h1>
+<!-- GPS Status Badge -->
+<div class="flex items-center gap-2 rounded-full bg-success/10 px-6 py-2 border border-success/20">
+<span class="material-symbols-outlined text-success !text-xl" style="font-size: 20px !important;">
+                    location_on
+                </span>
+<p class="text-success text-lg font-semibold leading-none">
+                    Ubicación GPS: Activa
+                </p>
+</div>
+</header>
+<!-- Main Emergency Buttons Area -->
+<main class="flex flex-1 flex-col gap-6 px-6 pb-12 justify-center">
+<!-- Inseguridad Button (SOS) -->
+<button class="flex flex-col items-center justify-center gap-4 w-full h-full max-h-[42%] bg-primary active:scale-95 transition-transform duration-100 rounded-xl shadow-2xl border-b-8 border-primary/40">
+<div class="flex items-center justify-center text-white">
+<span class="material-symbols-outlined">shield</span>
+</div>
+<span class="text-white text-3xl font-extrabold tracking-wider uppercase">
+                    INSEGURIDAD
+                </span>
+</button>
+<!-- Emergencia Médica Button -->
+<button class="flex flex-col items-center justify-center gap-4 w-full h-full max-h-[42%] bg-medical active:scale-95 transition-transform duration-100 rounded-xl shadow-2xl border-b-8 border-medical/40">
+<div class="flex items-center justify-center text-white">
+<span class="material-symbols-outlined">
+                        medical_services
+                    </span>
+</div>
+<span class="text-white text-3xl font-extrabold tracking-wider uppercase">
+                    EMERGENCIA MÉDICA
+                </span>
+</button>
+</main>
+<!-- Bottom Navigation / Instructions -->
+<footer class="px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800">
+<p class="text-slate-500 dark:text-slate-400 text-center text-base font-medium">
+                Mantenga presionado 2 segundos para activar
+            </p>
+<div class="flex justify-around mt-4 pt-2">
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined !text-3xl" style="font-size: 30px !important;">home</span>
+<span class="text-xs font-bold uppercase">Inicio</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined !text-3xl" style="font-size: 30px !important;">group</span>
+<span class="text-xs font-bold uppercase">Contactos</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined !text-3xl" style="font-size: 30px !important;">settings</span>
+<span class="text-xs font-bold uppercase">Ajustes</span>
+</a>
+</div>
+</footer>
+<!-- iPhone Home Indicator Spacer (Simulated for visual completeness) -->
+<div class="h-6 w-full"></div>
+</div>
+</body></html>
