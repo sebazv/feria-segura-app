@@ -1,62 +1,131 @@
-import { useStore } from '../../store';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../App';
+import { User, Phone, MapPin, LogOut, Shield, Settings, Clock, ShieldAlert } from 'lucide-react';
 
-export default function StitchProfile() {
-    const { darkMode, toggleDarkMode, useStitchUI, toggleUI } = useStore();
+export default function ProfilePage() {
+    const navigate = useNavigate();
+    const { user, userData, logout } = useAuth();
+    const [stats, setStats] = useState({ total: 0, insecurity: 0, medical: 0 });
+
+    useEffect(() => {
+        // Demo stats - en producción vendrían de Firebase
+        setStats({
+            total: 5,
+            insecurity: 3,
+            medical: 2
+        });
+    }, []);
+
+    const handleLogout = async () => {
+        if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+            await logout();
+            navigate('/login');
+        }
+    };
+
+    if (!user || !userData) {
+        return (
+            <div className="p-4 pb-24 bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-500">Cargando...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="font-display bg-white dark:bg-[#221010] min-h-[calc(100vh-6rem)] p-6 pb-safe">
-            <header className="pt-6 pb-6">
-                <h1 className="text-slate-900 dark:text-slate-100 text-[32px] font-bold tracking-tight mb-4 flex items-center gap-3 w-full">
-                    <span className="material-symbols-outlined !text-4xl text-[#1b64da]">person</span>
-                    MI PERFIL
+        <div className="p-4 pb-24 bg-gray-50 dark:bg-gray-900 min-h-screen">
+            {/* Header */}
+            <header className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-1">
+                    Mi Perfil
                 </h1>
-                <div className="h-[2px] w-full bg-slate-200 dark:bg-slate-800 rounded"></div>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    Información de tu cuenta
+                </p>
             </header>
 
-            <main className="flex flex-col gap-6 w-full">
-                {/* User Card */}
-                <div className="flex flex-col items-center p-6 bg-slate-50 dark:bg-[#1a0c0c] border-2 border-slate-200 dark:border-slate-700 rounded-2xl">
-                    <div className="w-24 h-24 bg-slate-200 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400 mb-4">
-                        <span className="material-symbols-outlined !text-5xl">person</span>
+            {/* Profile Card */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700 p-6 mb-6">
+                <div className="flex items-center gap-4 mb-4">
+                    <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                        <User className="w-8 h-8 text-red-600" />
                     </div>
-                    <h2 className="text-2xl font-bold uppercase text-slate-900 dark:text-white">Juan Pérez</h2>
-                    <p className="text-xl font-medium text-slate-500 dark:text-slate-400 mt-1">Puesto #42</p>
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+                            {userData.nombre}
+                        </h2>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">
+                            RUT: {userData.rut}
+                        </p>
+                    </div>
                 </div>
 
-                {/* System Settings */}
-                <div className="flex flex-col gap-4">
-                    <button
-                        onClick={toggleDarkMode}
-                        className="flex items-center justify-between p-6 bg-white dark:bg-[#1a0c0c] border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                    >
-                        <span className="text-xl font-bold text-slate-800 dark:text-slate-200 flex items-center gap-3">
-                            <span className="material-symbols-outlined text-slate-400">{darkMode ? 'dark_mode' : 'light_mode'}</span>
-                            Modo Oscuro
-                        </span>
-                        <div className={`w-14 h-8 rounded-full transition-colors flex items-center px-1 ${darkMode ? 'bg-[#16a34a]' : 'bg-slate-300'}`}>
-                            <div className={`w-6 h-6 bg-white rounded-full transition-transform ${darkMode ? 'translate-x-6' : 'translate-x-0'}`}></div>
-                        </div>
-                    </button>
-
-                    <button
-                        onClick={toggleUI}
-                        className="flex items-center justify-between p-6 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/50 rounded-xl transition-colors"
-                    >
-                        <span className="text-xl font-bold text-blue-800 dark:text-blue-200 flex items-center gap-3">
-                            <span className="material-symbols-outlined text-blue-400">palette</span>
-                            Diseño Actual
-                        </span>
-                        <span className="px-3 py-1 bg-blue-600 text-white rounded font-bold uppercase text-sm">
-                            {useStitchUI ? 'Versión Stitch' : 'Versión Original'}
-                        </span>
-                    </button>
-
-                    <button className="flex items-center p-6 bg-white dark:bg-[#1a0c0c] border border-slate-200 dark:border-slate-700 rounded-xl text-xl font-bold text-slate-800 dark:text-slate-200 mt-2 gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <span className="material-symbols-outlined text-[#ec1313]">emergency</span>
-                        Contactos de Emergencia
-                    </button>
+                <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+                        <Phone size={18} className="text-gray-400" />
+                        <span>{userData.telefono}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+                        <MapPin size={18} className="text-gray-400" />
+                        <span>Puesto: {userData.puestoNumero}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+                        <Shield size={18} className="text-gray-400" />
+                        <span className="capitalize">{userData.role || 'Feriante'}</span>
+                    </div>
                 </div>
-            </main>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-3 mb-6">
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md text-center">
+                    <p className="text-2xl font-bold text-gray-800 dark:text-white">{stats.total}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
+                </div>
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md text-center">
+                    <p className="text-2xl font-bold text-red-600">{stats.insecurity}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Inseguridad</p>
+                </div>
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md text-center">
+                    <p className="text-2xl font-bold text-blue-600">{stats.medical}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Médicas</p>
+                </div>
+            </div>
+
+            {/* Menu */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700 overflow-hidden">
+                <button
+                    onClick={() => navigate('/history')}
+                    className="w-full flex items-center gap-3 p-4 border-b border-gray-100 dark:border-gray-700 text-gray-800 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                    <Clock size={20} className="text-gray-400" />
+                    <span>Mi Historial</span>
+                </button>
+                <button
+                    onClick={() => navigate('/admin')}
+                    className="w-full flex items-center gap-3 p-4 border-b border-gray-100 dark:border-gray-700 text-gray-800 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                    <ShieldAlert size={20} className="text-gray-400" />
+                    <span>Panel Admin</span>
+                </button>
+                <button
+                    onClick={() => navigate('/settings')}
+                    className="w-full flex items-center gap-3 p-4 border-b border-gray-100 dark:border-gray-700 text-gray-800 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                    <Settings size={20} className="text-gray-400" />
+                    <span>Configuración</span>
+                </button>
+                <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 p-4 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                >
+                    <LogOut size={20} />
+                    <span>Cerrar Sesión</span>
+                </button>
+            </div>
         </div>
     );
 }

@@ -1,61 +1,131 @@
-import { User, Shield } from 'lucide-react';
-import { useStore } from '../../store';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../App';
+import { User, Phone, MapPin, LogOut, Shield, Settings, Clock, ShieldAlert } from 'lucide-react';
 
-export default function Profile() {
-    const { darkMode, toggleDarkMode, useStitchUI, toggleUI } = useStore();
+export default function ProfilePage() {
+    const navigate = useNavigate();
+    const { user, userData, logout } = useAuth();
+    const [stats, setStats] = useState({ total: 0, insecurity: 0, medical: 0 });
+
+    useEffect(() => {
+        // Demo stats - en producción vendrían de Firebase
+        setStats({
+            total: 5,
+            insecurity: 3,
+            medical: 2
+        });
+    }, []);
+
+    const handleLogout = async () => {
+        if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+            await logout();
+            navigate('/login');
+        }
+    };
+
+    if (!user || !userData) {
+        return (
+            <div className="p-4 pb-24 bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-500">Cargando...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="flex flex-col min-h-[calc(100vh-6rem)] relative w-full max-w-lg mx-auto p-4 sm:p-6 bg-white dark:bg-black pb-12">
-
+        <div className="p-4 pb-24 bg-gray-50 dark:bg-gray-900 min-h-screen">
             {/* Header */}
-            <header className="flex flex-col w-full mt-4 mb-6">
-                <h1 className="text-4xl sm:text-5xl font-black text-left mb-2 tracking-tight dark:text-white uppercase flex items-center gap-4">
-                    <User size={40} className="text-[#1d4ed8]" />
+            <header className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-1">
                     Mi Perfil
                 </h1>
-                <div className="h-1 w-full bg-gray-200 dark:bg-gray-800 rounded mb-4"></div>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    Información de tu cuenta
+                </p>
             </header>
 
-            {/* User Info */}
-            <div className="flex flex-col gap-6 w-full mb-8">
-                <div className="p-6 bg-gray-50 dark:bg-gray-900 border-[3px] border-gray-300 dark:border-gray-700 rounded-3xl text-center">
-                    <div className="mx-auto bg-gray-200 w-32 h-32 rounded-full mb-4 flex items-center justify-center dark:bg-gray-800">
-                        <User size={64} className="text-gray-400" />
+            {/* Profile Card */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700 p-6 mb-6">
+                <div className="flex items-center gap-4 mb-4">
+                    <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                        <User className="w-8 h-8 text-red-600" />
                     </div>
-                    <h2 className="text-3xl font-black uppercase text-black dark:text-white">Juan Pérez</h2>
-                    <p className="text-2xl font-bold text-gray-600 dark:text-gray-400 mt-2">Puesto #42</p>
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+                            {userData.nombre}
+                        </h2>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">
+                            RUT: {userData.rut}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+                        <Phone size={18} className="text-gray-400" />
+                        <span>{userData.telefono}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+                        <MapPin size={18} className="text-gray-400" />
+                        <span>Puesto: {userData.puestoNumero}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+                        <Shield size={18} className="text-gray-400" />
+                        <span className="capitalize">{userData.role || 'Feriante'}</span>
+                    </div>
                 </div>
             </div>
 
-            {/* Settings */}
-            <div className="flex flex-col gap-4 w-full">
-                <button
-                    onClick={toggleDarkMode}
-                    className="w-full flex items-center justify-between p-6 bg-gray-100 dark:bg-gray-800 rounded-2xl text-2xl font-bold text-black dark:text-white transition-colors"
-                >
-                    <span>Modo Alto Contraste</span>
-                    <div className={`w-16 h-8 rounded-full transition-colors flex items-center px-1 ${darkMode ? 'bg-[var(--color-brand-green)]' : 'bg-gray-400'}`}>
-                        <div className={`w-6 h-6 bg-white rounded-full transition-transform ${darkMode ? 'translate-x-8' : 'translate-x-0'}`}></div>
-                    </div>
-                </button>
-                <button
-                    onClick={toggleUI}
-                    className="w-full flex items-center justify-between p-6 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/50 rounded-2xl transition-colors"
-                >
-                    <span className="text-xl font-bold text-blue-800 dark:text-blue-200 flex items-center gap-3">
-                        Diseño Actual
-                    </span>
-                    <span className="px-3 py-1 bg-blue-600 text-white rounded font-bold text-sm">
-                        {useStitchUI ? 'Versión Stitch' : 'Versión Original'}
-                    </span>
-                </button>
-
-                <button className="w-full flex items-center justify-start p-6 bg-gray-100 dark:bg-gray-800 rounded-2xl text-2xl font-bold text-black dark:text-white mt-4 gap-4">
-                    <Shield size={32} className="text-[#ec1313]" />
-                    Contactos de Emergencia
-                </button>
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-3 mb-6">
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md text-center">
+                    <p className="text-2xl font-bold text-gray-800 dark:text-white">{stats.total}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
+                </div>
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md text-center">
+                    <p className="text-2xl font-bold text-red-600">{stats.insecurity}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Inseguridad</p>
+                </div>
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md text-center">
+                    <p className="text-2xl font-bold text-blue-600">{stats.medical}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Médicas</p>
+                </div>
             </div>
 
+            {/* Menu */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700 overflow-hidden">
+                <button
+                    onClick={() => navigate('/history')}
+                    className="w-full flex items-center gap-3 p-4 border-b border-gray-100 dark:border-gray-700 text-gray-800 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                    <Clock size={20} className="text-gray-400" />
+                    <span>Mi Historial</span>
+                </button>
+                <button
+                    onClick={() => navigate('/admin')}
+                    className="w-full flex items-center gap-3 p-4 border-b border-gray-100 dark:border-gray-700 text-gray-800 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                    <ShieldAlert size={20} className="text-gray-400" />
+                    <span>Panel Admin</span>
+                </button>
+                <button
+                    onClick={() => navigate('/settings')}
+                    className="w-full flex items-center gap-3 p-4 border-b border-gray-100 dark:border-gray-700 text-gray-800 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                    <Settings size={20} className="text-gray-400" />
+                    <span>Configuración</span>
+                </button>
+                <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 p-4 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                >
+                    <LogOut size={20} />
+                    <span>Cerrar Sesión</span>
+                </button>
+            </div>
         </div>
     );
 }
