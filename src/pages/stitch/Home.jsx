@@ -1,7 +1,9 @@
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 
 export default function StitchHome() {
     const navigate = useNavigate();
+    const [emergencyCount] = useState(12); // Demo counter
 
     return (
         <div className="relative flex h-[calc(100vh-6rem)] w-full flex-col overflow-hidden pb-safe font-display select-none">
@@ -21,6 +23,13 @@ export default function StitchHome() {
                 </div>
             </header>
 
+            {/* Emergency Counter - TEST CHANGE */}
+            <div className="mx-6 mb-4 p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                <p className="text-slate-600 dark:text-slate-300 text-sm">
+                    Emergencias reportadas hoy: <span className="font-bold text-red-600">{emergencyCount}</span>
+                </p>
+            </div>
+
             {/* Main Emergency Buttons Area */}
             <main className="flex flex-1 flex-col gap-6 px-6 pb-12 justify-center">
                 {/* Inseguridad Button (SOS) */}
@@ -29,7 +38,9 @@ export default function StitchHome() {
                     className="flex flex-col items-center justify-center gap-4 w-full h-full max-h-[42%] bg-[#ec1313] active:scale-95 transition-transform duration-100 rounded-xl shadow-2xl border-b-8 border-[#ec1313] border-opacity-40"
                 >
                     <div className="flex items-center justify-center text-white">
-                        <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1, 'wght' 700", fontSize: '80px' }}>shield</span>
+                        <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1, 'wght' 700", fontSize: '80px' }}>
+                            shield
+                        </span>
                     </div>
                     <span className="text-white text-3xl font-extrabold tracking-wider uppercase">
                         INSEGURIDAD
