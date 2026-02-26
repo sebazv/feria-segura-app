@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Phone, MapPin, User, Lock, Eye, EyeOff, ArrowRight, Mail } from 'lucide-react';
+import { Shield, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { registerFeriante, loginFeriante, validarEmail, validarTelefono } from '../lib/auth';
 
 export default function Login() {
@@ -30,22 +30,11 @@ export default function Login() {
 
         try {
             if (isRegister) {
-                // Validaciones de registro
-                if (!validarEmail(formData.email)) {
-                    throw new Error('Ingresa un correo electrónico válido');
-                }
-                if (!validarTelefono(formData.telefono)) {
-                    throw new Error('Ingresa un número de teléfono válido (9 dígitos)');
-                }
-                if (!formData.puestoNumero.trim()) {
-                    throw new Error('Ingresa tu número de puesto');
-                }
-                if (formData.password.length < 6) {
-                    throw new Error('La contraseña debe tener al menos 6 caracteres');
-                }
-                if (formData.password !== formData.confirmPassword) {
-                    throw new Error('Las contraseñas no coinciden');
-                }
+                if (!validarEmail(formData.email)) throw new Error('Correo inválido');
+                if (!validarTelefono(formData.telefono)) throw new Error('Teléfono inválido (9 dígitos)');
+                if (!formData.puestoNumero.trim()) throw new Error('Ingresa tu puesto');
+                if (formData.password.length < 6) throw new Error('Mínimo 6 caracteres');
+                if (formData.password !== formData.confirmPassword) throw new Error('Las contraseñas no coinciden');
 
                 const result = await registerFeriante({
                     email: formData.email.toLowerCase().trim(),
@@ -54,39 +43,18 @@ export default function Login() {
                     password: formData.password
                 });
 
-                if (!result.success) {
-                    throw new Error(result.error);
-                }
-
-                // Login automático después de registro
-                const loginResult = await loginFeriante(
-                    formData.email.toLowerCase().trim(),
-                    formData.password
-                );
-
-                if (!loginResult.success) {
-                    navigate('/');
-                } else {
-                    navigate('/');
-                }
+                if (!result.success) throw new Error(result.error);
+                navigate('/');
             } else {
-                // Login
-                if (!validarEmail(formData.email)) {
-                    throw new Error('Ingresa un correo electrónico válido');
-                }
-                if (!formData.password.trim()) {
-                    throw new Error('Ingresa tu contraseña');
-                }
+                if (!validarEmail(formData.email)) throw new Error('Correo inválido');
+                if (!formData.password) throw new Error('Ingresa tu contraseña');
 
                 const result = await loginFeriante(
                     formData.email.toLowerCase().trim(),
                     formData.password
                 );
 
-                if (!result.success) {
-                    throw new Error(result.error || 'Credenciales incorrectas');
-                }
-
+                if (!result.success) throw new Error('Credenciales incorrectas');
                 navigate('/');
             }
         } catch (err) {
@@ -97,23 +65,22 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-red-600 to-red-800 flex flex-col">
-            <div className="flex-1 flex flex-col items-center justify-center p-6">
-                <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">
-                    {/* Logo/Title */}
+        <div className="min-h-screen bg-gray-50 flex flex-col">
+            {/* Header */}
+            <div className="flex-1 flex flex-col items-center justify-center p-8">
+                <div className="w-full max-w-sm">
+                    {/* Logo */}
                     <div className="text-center mb-8">
-                        <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Shield className="w-10 h-10 text-red-600" />
+                        <div className="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-red-200">
+                            <Shield className="w-8 h-8 text-white" />
                         </div>
-                        <h1 className="text-2xl font-black text-gray-800">Feria Segura</h1>
-                        <p className="text-gray-500 text-sm mt-1">
-                            {isRegister ? 'Registro de Feriantes' : 'Ingreso al Sistema'}
-                        </p>
+                        <h1 className="text-2xl font-bold text-gray-800">Feria Segura</h1>
+                        <p className="text-gray-500 text-sm mt-1">Sindicato de Peñaflor</p>
                     </div>
 
-                    {/* Error Message */}
+                    {/* Error */}
                     {error && (
-                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+                        <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm">
                             {error}
                         </div>
                     )}
@@ -123,154 +90,111 @@ export default function Login() {
                         {isRegister && (
                             <>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Correo Electrónico
-                                    </label>
-                                    <div className="relative">
-                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                        <input
-                                            type="email"
-                                            name="email"
-                                            value={formData.email}
-                                            onChange={handleChange}
-                                            placeholder="correo@ejemplo.com"
-                                            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
-                                        />
-                                    </div>
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        placeholder="Correo electrónico"
+                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    />
                                 </div>
-
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Teléfono
-                                    </label>
-                                    <div className="relative">
-                                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                        <input
-                                            type="tel"
-                                            name="telefono"
-                                            value={formData.telefono}
-                                            onChange={handleChange}
-                                            placeholder="+56 9 1234 5678"
-                                            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
-                                        />
-                                    </div>
+                                    <input
+                                        type="tel"
+                                        name="telefono"
+                                        value={formData.telefono}
+                                        onChange={handleChange}
+                                        placeholder="Teléfono (9 dígitos)"
+                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    />
                                 </div>
-
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Número de Puesto
-                                    </label>
-                                    <div className="relative">
-                                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                        <input
-                                            type="text"
-                                            name="puestoNumero"
-                                            value={formData.puestoNumero}
-                                            onChange={handleChange}
-                                            placeholder="Puesto #45"
-                                            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
-                                        />
-                                    </div>
+                                    <input
+                                        type="text"
+                                        name="puestoNumero"
+                                        value={formData.puestoNumero}
+                                        onChange={handleChange}
+                                        placeholder="Número de puesto"
+                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    />
                                 </div>
                             </>
                         )}
 
                         {!isRegister && (
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Correo Electrónico
-                                </label>
-                                <div className="relative">
-                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        value={formData.email}
-                                        onChange={handleChange}
-                                        placeholder="correo@ejemplo.com"
-                                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
-                                    />
-                                </div>
+                                <input
+                                    type="email"
+                                    name="email"
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                    placeholder="Correo electrónico"
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                                />
                             </div>
                         )}
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Contraseña
-                            </label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                <input
-                                    type={showPassword ? 'text' : 'password'}
-                                    name="password"
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    placeholder="••••••••"
-                                    className="w-full pl-10 pr-12 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                                >
-                                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                                </button>
-                            </div>
+                        <div className="relative">
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                name="password"
+                                value={formData.password}
+                                onChange={handleChange}
+                                placeholder="Contraseña"
+                                className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                            >
+                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
                         </div>
 
                         {isRegister && (
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Confirmar Contraseña
-                                </label>
-                                <div className="relative">
-                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                    <input
-                                        type={showPassword ? 'text' : 'password'}
-                                        name="confirmPassword"
-                                        value={formData.confirmPassword}
-                                        onChange={handleChange}
-                                        placeholder="••••••••"
-                                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
-                                    />
-                                </div>
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    name="confirmPassword"
+                                    value={formData.confirmPassword}
+                                    onChange={handleChange}
+                                    placeholder="Confirmar contraseña"
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                                />
                             </div>
                         )}
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-colors"
+                            className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2"
                         >
                             {loading ? (
                                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                             ) : (
                                 <>
                                     {isRegister ? 'Registrarse' : 'Ingresar'}
-                                    <ArrowRight size={20} />
+                                    <ArrowRight size={18} />
                                 </>
                             )}
                         </button>
                     </form>
 
-                    {/* Toggle Login/Register */}
-                    <div className="mt-6 text-center">
-                        <button
-                            onClick={() => { setIsRegister(!isRegister); setError(''); }}
-                            className="text-red-600 hover:text-red-700 font-medium text-sm"
-                        >
-                            {isRegister 
-                                ? '¿Ya tienes cuenta? Ingresa aquí' 
-                                : '¿No tienes cuenta? Regístrate aquí'}
+                    {/* Toggle */}
+                    <p className="text-center mt-6 text-sm text-gray-500">
+                        {isRegister ? '¿Ya tienes cuenta? ' : '¿No tienes cuenta? '}
+                        <button onClick={() => { setIsRegister(!isRegister); setError(''); }} className="text-red-600 font-medium">
+                            {isRegister ? 'Ingresa' : 'Regístrate'}
                         </button>
-                    </div>
+                    </p>
                 </div>
             </div>
 
             {/* Footer */}
-            <footer className="py-4 text-center text-white/70 text-xs">
-                <p>Feria Segura — Sindicato de Peñaflor</p>
-                <p>Desarrollado por SZV</p>
+            <footer className="py-4 text-center text-gray-400 text-xs">
+                Desarrollado por SZV
             </footer>
         </div>
     );
