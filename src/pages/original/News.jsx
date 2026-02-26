@@ -1,68 +1,88 @@
-import { Bell } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { MessageSquare, Clock, Loader, Megaphone, Info } from 'lucide-react';
+import { getNoticias } from '../../lib/comunidad';
 
-export default function News() {
-    const newsItems = [
-        {
-            id: 1,
-            title: 'OPERATIVO EN FERIA MALLOCO',
-            date: 'HOY 10:00 AM',
-            description: 'Presencia policial aumentada. Se solicita mantener los pasillos despejados para eventuales emergencias.',
-            urgent: true,
-        },
-        {
-            id: 2,
-            title: 'ASAMBLEA EXTRAORDINARIA',
-            date: 'JUEVES 15 - 18:00 PM',
-            description: 'Votación obligatoria para nuevos convenios del sindicato de Los Guindos. Asistencia requerida.',
-            urgent: false,
-        },
-        {
-            id: 3,
-            title: 'NUEVO PUNTO DE HIDRATACIÓN',
-            date: 'AYER',
-            description: 'Debido a la ola de calor, se instaló un punto de hidratación cerca del puesto municipal. Cuidemos nuestra salud.',
-            urgent: false,
-        },
-    ];
+export default function NewsPage() {
+    const [noticias, setNoticias] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const loadNoticias = async () => {
+            const result = await getNoticias();
+            if (result.success) {
+                setNoticias(result.noticias);
+            }
+            setLoading(false);
+        };
+
+        loadNoticias();
+    }, []);
+
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('es-CL', { 
+            day: 'numeric', 
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+    };
+
+    if (loading) {
+        return (
+            <div className="p-4 pb-24 bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center">
+                <Loader className="w-8 h-8 animate-spin text-red-600" />
+            </div>
+        );
+    }
 
     return (
-        <div className="flex flex-col min-h-[calc(100vh-6rem)] relative w-full max-w-lg mx-auto p-4 pb-8 sm:p-6 bg-white dark:bg-black">
-
-            {/* Search & Header */}
-            <header className="flex flex-col w-full mt-4 mb-6">
-                <h1 className="text-4xl sm:text-5xl font-black text-left mb-2 tracking-tight dark:text-white uppercase flex items-center gap-4">
-                    <Bell size={40} className="text-[#13ec5b]" />
-                    Noticias
+        <div className="p-4 pb-24 bg-gray-50 dark:bg-gray-900 min-h-screen">
+            <header className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-1">
+                    Muro de Noticias
                 </h1>
-                <div className="h-1 w-full bg-gray-200 dark:bg-gray-800 rounded mb-4"></div>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    Noticias y anuncios oficiales
+                </p>
             </header>
 
-            {/* News List */}
-            <div className="flex flex-col gap-6 w-full">
-                {newsItems.map((item) => (
-                    <article
-                        key={item.id}
-                        className={`border-[3px] rounded-3xl p-6 sm:p-8 bg-white dark:bg-gray-900 shadow-sm ${item.urgent ? 'border-[#ec1313]' : 'border-gray-300 dark:border-gray-700'
-                            }`}
+            <div className="space-y-4">
+                {noticias.map((noticia) => (
+                    <div 
+                        key={noticia.id}
+                        className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700 overflow-hidden"
                     >
-                        {item.urgent && (
-                            <span className="inline-block px-3 py-1 mb-4 bg-[#ec1313] text-white font-bold rounded text-lg uppercase">
-                                Urgente
-                            </span>
-                        )}
-                        <h2 className="text-2xl sm:text-3xl font-black text-black dark:text-white uppercase leading-snug mb-3">
-                            {item.title}
-                        </h2>
-                        <div className="text-xl font-bold text-[#1d4ed8] dark:text-[#60a5fa] mb-4">
-                            {item.date}
+                        <div className="bg-red-600 px-4 py-2 flex items-center gap-2">
+                            <Megaphone className="w-4 h-4 text-white" />
+                            <span className="text-white font-semibold text-sm">NOTICIA OFICIAL</span>
                         </div>
-                        <p className="text-xl text-gray-800 dark:text-gray-200 font-medium leading-relaxed">
-                            {item.description}
-                        </p>
-                    </article>
+                        
+                        <div className="p-4">
+                            <h2 className="text-lg font-bold text-gray-800 dark:text-white mb-2">
+                                {noticia.titulo}
+                            </h2>
+                            <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
+                                {noticia.contenido}
+                            </p>
+                            
+                            <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 text-xs text-gray-400">
+                                <Clock size={12} />
+                                <span>{formatDate(noticia.created_at)}</span>
+                            </div>
+                        </div>
+                    </div>
                 ))}
-            </div>
 
+                {noticias.length === 0 && (
+                    <div className="text-center py-12">
+                        <Info className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500 dark:text-gray-400">No hay noticias publicadas</p>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

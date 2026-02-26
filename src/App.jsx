@@ -11,6 +11,8 @@ import OriginalLoading from './pages/original/Loading';
 import OriginalConfirmation from './pages/original/Confirmation';
 import OriginalHistory from './pages/original/History';
 import OriginalNews from './pages/original/News';
+import OriginalChat from './pages/original/Chat';
+import OriginalEncuestas from './pages/original/Encuestas';
 import OriginalProfile from './pages/original/Profile';
 
 // Stitch pages
@@ -19,6 +21,8 @@ import StitchLoading from './pages/stitch/Loading';
 import StitchConfirmation from './pages/stitch/Confirmation';
 import StitchHistory from './pages/stitch/History';
 import StitchNews from './pages/stitch/News';
+import StitchChat from './pages/stitch/Chat';
+import StitchEncuestas from './pages/stitch/Encuestas';
 import StitchProfile from './pages/stitch/Profile';
 
 // Login
@@ -124,6 +128,8 @@ function AppContent() {
     const Confirmation = useStitchUI ? StitchConfirmation : OriginalConfirmation;
     const History = useStitchUI ? StitchHistory : OriginalHistory;
     const News = useStitchUI ? StitchNews : OriginalNews;
+    const Chat = useStitchUI ? StitchChat : OriginalChat;
+    const Encuestas = useStitchUI ? StitchEncuestas : OriginalEncuestas;
     const Profile = useStitchUI ? StitchProfile : OriginalProfile;
 
     return (
@@ -144,6 +150,8 @@ function AppContent() {
                 <Route index element={<Home />} />
                 <Route path="history" element={<History />} />
                 <Route path="news" element={<News />} />
+                <Route path="chat" element={<Chat />} />
+                <Route path="encuestas" element={<Encuestas />} />
                 <Route path="profile" element={<Profile />} />
             </Route>
 
