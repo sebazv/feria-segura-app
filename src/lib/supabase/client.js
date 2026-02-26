@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 import { supabaseUrl, supabaseAnonKey } from './keys';
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-export { supabase };
+// Cliente público (para el frontend)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
