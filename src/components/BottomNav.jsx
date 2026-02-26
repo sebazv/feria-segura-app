@@ -1,10 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { AlertCircle, History, User } from 'lucide-react';
+import { AlertCircle, Clock, User } from 'lucide-react';
 
 export default function BottomNav() {
     const tabs = [
         { name: 'SOS', href: '/', icon: AlertCircle },
-        { name: 'Noticias', href: '/news', icon: History },
+        { name: 'Historial', href: '/history', icon: Clock },
         { name: 'Perfil', href: '/profile', icon: User },
     ];
 

@@ -7,6 +7,7 @@ import { useStore } from './store';
 import OriginalHome from './pages/original/Home';
 import OriginalLoading from './pages/original/Loading';
 import OriginalConfirmation from './pages/original/Confirmation';
+import OriginalHistory from './pages/original/History';
 import OriginalNews from './pages/original/News';
 import OriginalProfile from './pages/original/Profile';
 
@@ -14,6 +15,7 @@ import OriginalProfile from './pages/original/Profile';
 import StitchHome from './pages/stitch/Home';
 import StitchLoading from './pages/stitch/Loading';
 import StitchConfirmation from './pages/stitch/Confirmation';
+import StitchHistory from './pages/stitch/History';
 import StitchNews from './pages/stitch/News';
 import StitchProfile from './pages/stitch/Profile';
 
@@ -30,6 +32,7 @@ export default function App() {
   const Home = useStitchUI ? StitchHome : OriginalHome;
   const Loading = useStitchUI ? StitchLoading : OriginalLoading;
   const Confirmation = useStitchUI ? StitchConfirmation : OriginalConfirmation;
+  const History = useStitchUI ? StitchHistory : OriginalHistory;
   const News = useStitchUI ? StitchNews : OriginalNews;
   const Profile = useStitchUI ? StitchProfile : OriginalProfile;
 
@@ -38,6 +41,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
+          <Route path="history" element={<History />} />
           <Route path="news" element={<News />} />
           <Route path="profile" element={<Profile />} />
         </Route>
