@@ -102,26 +102,20 @@ function ProtectedRoute({ children, requireAdmin = false }) {
     return children;
 }
 
-// Public route - redirect if logged in
+// Public route - redirect to home if already logged in
 function PublicRoute({ children }) {
     const { user, loading } = useAuth();
-    const navigate = useNavigate();
-
-    useEffect(() => {
-        if (!loading && user) {
-            navigate('/');
-        }
-    }, [user, loading, navigate]);
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+            <div style={{ padding: '50px', textAlign: 'center' }}>
+                <p>Cargando...</p>
             </div>
         );
     }
 
-    return !user ? children : null;
+    // Just render the children (login page) - don't redirect
+    return children;
 }
 
 function AppContent() {

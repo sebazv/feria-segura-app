@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feria Segura</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f3f4f6; }
+        .header { background: #dc2626; color: white; padding: 20px; text-align: center; }
+        .header h1 { font-size: 24px; font-weight: bold; }
+        .header p { font-size: 14px; opacity: 0.9; }
+        .status { text-align: center; padding: 15px; }
+        .status-badge { 
+            display: inline-flex; align-items: center; gap: 8px;
+            background: #16a34a; color: white; padding: 8px 16px; 
+            border-radius: 20px; font-size: 14px; font-weight: 500;
+        }
+        .buttons { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+        .btn { 
+            padding: 40px 20px; border: none; border-radius: 16px; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; gap: 12px;
+            font-size: 20px; font-weight: bold; color: white;
+        }
+        .btn-red { background: #dc2626; }
+        .btn-blue { background: #2563eb; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .nav { 
+            position: fixed; bottom: 0; left: 0; right: 0; 
+            background: white; border-top: 1px solid #e5e7eb; 
+            padding: 16px; text-align: center;
+        }
+        .nav a { color: #6b7280; text-decoration: none; font-size: 14px; }
+        .content { padding-bottom: 80px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Feria Segura</h1>
+        <p>Sindicato de Peñaflor</p>
+    </div>
+    
+    <div class="status">
+        <div class="status-badge">
+            <span>●</span> Activo • 06:00 - 17:00
+        </div>
+    </div>
+    
+    <div class="content">
+        <div class="buttons">
+            <button class="btn btn-red" onclick="window.location.href='/loading?type=insecurity'">
+                🛡️ INSEGURIDAD
+            </button>
+            <button class="btn btn-blue" onclick="window.location.href='/loading?type=medical'">
+                🏥 EMERGENCIA MÉDICA
+            </button>
+        </div>
+    </div>
+    
+    <div class="nav">
+        <a href="/login">👤 Ingresar / Registrarse</a>
+    </div>
+</body>
+</html>
