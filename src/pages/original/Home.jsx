@@ -13,33 +13,21 @@ export default function Home() {
         if (loading) return;
         setLoading(true);
 
-        const buildPayloadAndDispatch = async (lat = 0, lng = 0) => {
-            const { reverseGeocode, sendAlertWebhook } = await import('../../lib/services');
-            const address = await reverseGeocode(lat, lng);
-
-            const payload = {
-                tipo_emergencia: type === 'insecurity' ? 'HECHO_INSEGURIDAD' : 'EMERGENCIA_MEDICA',
-                usuario_nombre: 'Feriante Demo',
-                usuario_telefono: '+56912345678',
-                puesto_numero: 'Puesto N°45',
-                direccion: address,
-                link_mapa: lat && lng ? `https://maps.google.com/?q=${lat},${lng}` : 'Sin GPS',
-                timestamp: new Date().toISOString()
-            };
-
-            await sendAlertWebhook(payload);
-            setLoading(false);
-            navigate(`/confirmation?type=${type}`);
-        };
-
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (pos) => buildPayloadAndDispatch(pos.coords.latitude, pos.coords.longitude),
-                (err) => buildPayloadAndDispatch(0, 0), // Fallback if no GPS access
+                (pos) => {
+                    setLoading(false);
+                    navigate(`/loading?type=${type}&lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`);
+                },
+                (err) => {
+                    setLoading(false);
+                    navigate(`/loading?type=${type}&lat=0&lng=0`);
+                },
                 { enableHighAccuracy: true, timeout: 5000 }
             );
         } else {
-            buildPayloadAndDispatch(0, 0); // Not supported
+            setLoading(false);
+            navigate(`/loading?type=${type}&lat=0&lng=0`);
         }
     };
 
