@@ -166,11 +166,11 @@ export default function LoadingPage() {
             </header>
 
             {/* Map */}
-            <div className="flex-1 relative">
+            <div className="flex-1 relative" style={{ minHeight: '400px' }}>
                 <MapContainer
                     center={[location?.lat || -33.4489, location?.lng || -70.6693]}
                     zoom={zoom}
-                    className="w-full h-full"
+                    style={{ width: '100%', height: '100%', minHeight: '400px' }}
                     zoomControl={false}
                 >
                     <TileLayer

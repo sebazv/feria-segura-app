@@ -82,7 +82,7 @@ export default function Confirmation() {
                 <MapContainer
                     center={[lat || -33.4489, lng || -70.6693]}
                     zoom={zoom}
-                    className="w-full h-full"
+                    style={{ width: "100%", height: "100%" }}
                     zoomControl={false}
                 >
                     <TileLayer
