@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { MapPin, Navigation, RefreshCw, AlertTriangle, Plus, ZoomIn, ZoomOut } from 'lucide-react';
+import { MapPin, Navigation, RefreshCw, AlertTriangle, Plus, ZoomIn, ZoomOut, Loader } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -28,16 +28,10 @@ function MapControls({ zoom, setZoom }) {
 
   return (
     <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
-      <button
-        onClick={handleZoomIn}
-        className="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg shadow-lg flex items-center justify-center text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-      >
+      <button onClick={handleZoomIn} className="w-10 h-10 bg-white rounded-lg shadow-lg flex items-center justify-center">
         <ZoomIn size={20} />
       </button>
-      <button
-        onClick={handleZoomOut}
-        className="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg shadow-lg flex items-center justify-center text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-      >
+      <button onClick={handleZoomOut} className="w-10 h-10 bg-white rounded-lg shadow-lg flex items-center justify-center">
         <ZoomOut size={20} />
       </button>
     </div>
@@ -47,20 +41,49 @@ function MapControls({ zoom, setZoom }) {
 export default function LoadingPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const type = searchParams.get('type');
+    const type = searchParams.get('type') || 'insecurity';
     
     const [location, setLocation] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [isClient, setIsClient] = useState(false);
-    const [zoom, setZoom] = useState(16);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
-        setIsClient(true);
+        const getLocation = () => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        setLocation({
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude,
+                            accuracy: position.coords.accuracy
+                        });
+                        setLoading(false);
+                    },
+                    (err) => {
+                        console.log('GPS error, using default:', err);
+                        setLocation({ lat: -33.4489, lng: -70.6693, accuracy: 0 });
+                        setLoading(false);
+                    },
+                    { enableHighAccuracy: true, timeout: 15000 }
+                );
+            } else {
+                setLocation({ lat: -33.4489, lng: -70.6693, accuracy: 0 });
+                setLoading(false);
+            }
+        };
+
+        getLocation();
     }, []);
 
-    useEffect(() => {
-        if (!isClient) return;
-        
+    const handleConfirmLocation = () => {
+        if (location) {
+            navigate(`/confirmation?type=${type}&lat=${location.lat}&lng=${location.lng}`);
+        }
+    };
+
+    const handleRetry = () => {
+        setLoading(true);
+        setError(null);
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -75,128 +98,90 @@ export default function LoadingPage() {
                     setLocation({ lat: -33.4489, lng: -70.6693, accuracy: 0 });
                     setLoading(false);
                 },
-                { enableHighAccuracy: true, timeout: 10000 }
+                { enableHighAccuracy: true, timeout: 15000 }
             );
-        } else {
-            setLocation({ lat: -33.4489, lng: -70.6693, accuracy: 0 });
-            setLoading(false);
-        }
-    }, [isClient]);
-
-    const handleConfirmLocation = () => {
-        if (location) {
-            navigate(`/confirmation?type=${type}&lat=${location.lat}&lng=${location.lng}`);
         }
     };
 
-    const handleRetry = () => {
-        setLoading(true);
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                setLocation({
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude,
-                    accuracy: position.coords.accuracy
-                });
-                setLoading(false);
-            },
-            () => {
-                setLocation({ lat: -33.4489, lng: -70.6693, accuracy: 0 });
-                setLoading(false);
-            },
-            { enableHighAccuracy: true, timeout: 10000 }
-        );
-    };
-
-    if (loading || !isClient) {
+    if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-6">
-                <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mb-6"></div>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
-                    Obteniendo ubicación...
-                </h2>
-                <p className="text-gray-500 dark:text-gray-400 text-center">
-                    Por favor permita el acceso a su ubicación
-                </p>
+            <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
+                <Loader className="w-10 h-10 animate-spin text-red-600 mb-4" />
+                <p className="text-gray-600 font-medium">Obteniendo ubicación...</p>
+                <p className="text-gray-400 text-sm mt-1">Por favor permite el acceso a tu ubicación</p>
             </div>
         );
     }
 
     const typeLabel = type === 'insecurity' ? 'Inseguridad' : 'Emergencia Médica';
     const typeColor = type === 'insecurity' ? 'red' : 'blue';
-    const TypeIcon = type === 'insecurity' ? AlertTriangle : Plus;
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-            <header className="bg-white dark:bg-gray-800 p-4 shadow-sm z-10 relative">
-                <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full bg-${typeColor}-100 dark:bg-${typeColor}-900/30`}>
-                        <TypeIcon className={`w-5 h-5 text-${typeColor}-600`} />
-                    </div>
-                    <div>
-                        <h1 className="text-lg font-bold text-gray-800 dark:text-white">
-                            Confirmar Ubicación
-                        </h1>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Alerta de {typeLabel}
-                        </p>
-                    </div>
-                </div>
+        <div className="min-h-screen bg-gray-50 flex flex-col">
+            {/* Header */}
+            <header className="bg-white p-4 shadow-sm">
+                <h1 className="text-lg font-bold text-gray-800">Confirmar ubicación</h1>
+                <p className="text-gray-500 text-sm">Alerta de {typeLabel}</p>
             </header>
 
+            {/* Map */}
             <div className="flex-1 relative">
                 <MapContainer
                     center={[location?.lat || -33.4489, location?.lng || -70.6693]}
-                    zoom={zoom}
-                    className="w-full h-full"
+                    zoom={16}
+                    style={{ width: '100%', height: '100%', minHeight: '300px' }}
                     zoomControl={false}
                 >
                     <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                        attribution='&copy; OpenStreetMap'
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
-                    {location?.lat && location?.lng && (
-                        <Marker position={[location.lat, location.lng]} />
-                    )}
-                    <MapControls zoom={zoom} setZoom={setZoom} />
+                    {location && <Marker position={[location.lat, location.lng]} />}
+                    <MapControls zoom={16} setZoom={() => {}} />
                 </MapContainer>
 
-                <div className="absolute bottom-4 left-4 right-4 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-3 z-[1000]">
+                {/* Location info */}
+                <div className="absolute bottom-4 left-4 right-4 bg-white rounded-xl shadow-lg p-3 z-[1000]">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <Navigation className="w-4 h-4 text-green-500" />
+                            <div className={`p-2 rounded-full bg-${typeColor}-100`}>
+                                {type === 'insecurity' ? (
+                                    <AlertTriangle className="w-4 h-4 text-red-600" />
+                                ) : (
+                                    <Plus className="w-4 h-4 text-blue-600" />
+                                )}
+                            </div>
                             <div>
-                                <p className="text-sm font-medium text-gray-800 dark:text-white">
-                                    {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
+                                <p className="text-sm font-medium text-gray-800">
+                                    {location?.lat?.toFixed(5)}, {location?.lng?.toFixed(5)}
                                 </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    {location.accuracy > 0 ? `Precisión: ±${Math.round(location.accuracy)}m` : 'Toca el mapa para mover'}
+                                <p className="text-xs text-gray-500">
+                                    {location?.accuracy > 0 ? `Precisión: ±${Math.round(location.accuracy)}m` : 'Ubicación por defecto'}
                                 </p>
                             </div>
                         </div>
-                        <button onClick={handleRetry} className="p-2 rounded-full bg-gray-100 dark:bg-gray-700">
-                            <RefreshCw size={16} className="text-gray-600 dark:text-gray-300" />
+                        <button onClick={handleRetry} className="p-2 rounded-full bg-gray-100">
+                            <RefreshCw size={16} className="text-gray-600" />
                         </button>
                     </div>
                 </div>
             </div>
 
-            <footer className="bg-white dark:bg-gray-800 p-4 safe-area-bottom">
-                <div className="flex flex-col gap-3">
-                    <button
-                        onClick={handleConfirmLocation}
-                        className="w-full bg-green-600 hover:bg-green-700 text-white py-4 px-6 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-lg"
-                    >
-                        <MapPin size={24} />
-                        Confirmar ubicación
-                    </button>
-                    <button
-                        onClick={() => navigate('/')}
-                        className="w-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 px-6 rounded-xl font-medium"
-                    >
-                        Cancelar
-                    </button>
-                </div>
+            {/* Footer */}
+            <footer className="bg-white p-4 safe-area-bottom">
+                <button
+                    onClick={handleConfirmLocation}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2"
+                >
+                    <MapPin size={20} />
+                    Confirmar ubicación
+                </button>
+                <button
+                    onClick={() => navigate('/')}
+                    className="w-full mt-2 text-gray-500 py-2"
+                >
+                    Cancelar
+                </button>
             </footer>
         </div>
     );
