@@ -1,17 +1,4 @@
-import { 
-    collection, 
-    addDoc, 
-    query, 
-    where, 
-    orderBy, 
-    limit, 
-    getDocs,
-    doc,
-    updateDoc,
-    serverTimestamp,
-    Timestamp 
-} from 'firebase/firestore';
-import { db } from './firebase/config';
+import { supabase } from './supabase/client';
 
 // Enviar alerta de emergencia
 export const sendAlert = async ({ 
@@ -30,19 +17,23 @@ export const sendAlert = async ({
             lat,
             lng,
             accuracy,
-            userId,
-            userName,
-            userPhone,
-            puestoNumero,
-            status: 'active', // active | resolved | cancelled
-            createdAt: serverTimestamp(),
-            resolvedAt: null,
-            resolvedBy: null
+            user_id: userId,
+            user_name: userName,
+            user_phone: userPhone,
+            puesto_numero: puestoNumero,
+            status: 'active',
+            created_at: new Date().toISOString()
         };
 
-        const docRef = await addDoc(collection(db, 'alertas'), alerta);
+        const { data, error } = await supabase
+            .from('alertas')
+            .insert(alerta)
+            .select()
+            .single();
+
+        if (error) throw error;
         
-        return { success: true, id: docRef.id };
+        return { success: true, id: data.id };
     } catch (error) {
         console.error('Error enviando alerta:', error);
         return { success: false, error: error.message };
@@ -52,23 +43,16 @@ export const sendAlert = async ({
 // Obtener alertas del usuario
 export const getUserAlerts = async (userId, limitCount = 50) => {
     try {
-        const q = query(
-            collection(db, 'alertas'),
-            where('userId', '==', userId),
-            orderBy('createdAt', 'desc'),
-            limit(limitCount)
-        );
+        const { data, error } = await supabase
+            .from('alertas')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(limitCount);
 
-        const snapshot = await getDocs(q);
-        const alertas = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            // Convertir timestamp a fecha
-            createdAt: doc.data().createdAt?.toDate()?.toISOString(),
-            resolvedAt: doc.data().resolvedAt?.toDate()?.toISOString()
-        }));
+        if (error) throw error;
 
-        return { success: true, alertas };
+        return { success: true, alertas: data || [] };
     } catch (error) {
         console.error('Error obteniendo alertas:', error);
         return { success: false, error: error.message, alertas: [] };
@@ -78,32 +62,21 @@ export const getUserAlerts = async (userId, limitCount = 50) => {
 // Obtener todas las alertas (para admin)
 export const getAllAlerts = async (status = null, limitCount = 100) => {
     try {
-        let q;
-        
+        let query = supabase
+            .from('alertas')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(limitCount);
+
         if (status) {
-            q = query(
-                collection(db, 'alertas'),
-                where('status', '==', status),
-                orderBy('createdAt', 'desc'),
-                limit(limitCount)
-            );
-        } else {
-            q = query(
-                collection(db, 'alertas'),
-                orderBy('createdAt', 'desc'),
-                limit(limitCount)
-            );
+            query = query.eq('status', status);
         }
 
-        const snapshot = await getDocs(q);
-        const alertas = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate()?.toISOString(),
-            resolvedAt: doc.data().resolvedAt?.toDate()?.toISOString()
-        }));
+        const { data, error } = await query;
 
-        return { success: true, alertas };
+        if (error) throw error;
+
+        return { success: true, alertas: data || [] };
     } catch (error) {
         console.error('Error obteniendo alertas:', error);
         return { success: false, error: error.message, alertas: [] };
@@ -113,11 +86,16 @@ export const getAllAlerts = async (status = null, limitCount = 100) => {
 // Resolver/cancelar alerta
 export const resolveAlert = async (alertId, userId) => {
     try {
-        await updateDoc(doc(db, 'alertas', alertId), {
-            status: 'resolved',
-            resolvedAt: serverTimestamp(),
-            resolvedBy: userId
-        });
+        const { error } = await supabase
+            .from('alertas')
+            .update({ 
+                status: 'resolved',
+                resolved_at: new Date().toISOString(),
+                resolved_by: userId
+            })
+            .eq('id', alertId);
+
+        if (error) throw error;
 
         return { success: true };
     } catch (error) {
@@ -138,23 +116,19 @@ export const getAlertStats = async () => {
         
         const stats = {
             total: alertas.length,
-            today: alertas.filter(a => new Date(a.createdAt) >= today).length,
+            today: alertas.filter(a => new Date(a.created_at) >= today).length,
             insecurity: alertas.filter(a => a.tipo === 'insecurity').length,
             medical: alertas.filter(a => a.tipo === 'medical').length,
             active: alertas.filter(a => a.status === 'active').length,
             resolved: alertas.filter(a => a.status === 'resolved').length,
-            // Por mes (últimos 6 meses)
             porMes: {},
-            // Por día de la semana
             porDiaSemana: [0, 0, 0, 0, 0, 0, 0]
         };
 
-        // Calcular estadísticas por mes
         alertas.forEach(alert => {
-            const fecha = new Date(alert.createdAt);
+            const fecha = new Date(alert.created_at);
             const mesKey = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
             stats.porMes[mesKey] = (stats.porMes[mesKey] || 0) + 1;
-            
             stats.porDiaSemana[fecha.getDay()]++;
         });
 
@@ -176,12 +150,12 @@ export const exportAlertsToCSV = async () => {
             alert.id,
             alert.tipo === 'insecurity' ? 'Inseguridad' : 'Emergencia Médica',
             alert.status,
-            new Date(alert.createdAt).toLocaleString('es-CL'),
+            new Date(alert.created_at).toLocaleString('es-CL'),
             alert.lat,
             alert.lng,
-            alert.userName,
-            alert.userPhone,
-            alert.puestoNumero
+            alert.user_name,
+            alert.user_phone,
+            alert.puesto_numero
         ]);
 
         const csv = [headers, ...rows].map(row => row.join(',')).join('\n');

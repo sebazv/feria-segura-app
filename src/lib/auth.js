@@ -1,14 +1,6 @@
-import { 
-    createUserWithEmailAndPassword, 
-    signInWithEmailAndPassword,
-    signOut,
-    onAuthStateChanged,
-    updateProfile
-} from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from './firebase/config';
+import { supabase } from './supabase/client';
 
-// Generar email desde RUT (sin puntos, sin guion)
+// Generar email desde RUT
 export const rutToEmail = (rut) => {
     return `${rut.replace(/[^0-9kK]/g, '').toLowerCase()}@feria-segura.cl`;
 };
@@ -22,28 +14,43 @@ export const registerFeriante = async ({
     password 
 }) => {
     try {
+        const rutLimpio = rut.replace(/[^0-9kK]/g, '').toLowerCase();
         const email = rutToEmail(rut);
         
-        // Crear usuario en Auth
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        // Actualizar perfil con nombre
-        await updateProfile(user, { displayName: nombre });
-
-        // Guardar datos adicionales en Firestore
-        await setDoc(doc(db, 'usuarios', user.uid), {
-            nombre,
-            rut: rut.replace(/[^0-9kK]/g, '').toLowerCase(),
-            telefono,
-            puestoNumero,
-            role: 'feriante',
-            activo: true,
-            createdAt: serverTimestamp(),
-            ultimoAcceso: serverTimestamp()
+        // Crear usuario en Auth de Supabase
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    nombre,
+                    rut: rutLimpio,
+                    telefono,
+                    puesto_numero: puestoNumero
+                }
+            }
         });
 
-        return { success: true, user };
+        if (error) throw error;
+
+        // Guardar datos adicionales en tabla 'usuarios'
+        if (data.user) {
+            const { error: profileError } = await supabase
+                .from('usuarios')
+                .insert({
+                    id: data.user.id,
+                    nombre,
+                    rut: rutLimpio,
+                    telefono,
+                    puesto_numero: puestoNumero,
+                    role: 'feriante',
+                    activo: true
+                });
+
+            if (profileError) console.error('Error guardando perfil:', profileError);
+        }
+
+        return { success: true, user: data.user };
     } catch (error) {
         console.error('Error en registro:', error);
         return { success: false, error: error.message };
@@ -54,14 +61,23 @@ export const registerFeriante = async ({
 export const loginFeriante = async (rut, password) => {
     try {
         const email = rutToEmail(rut);
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
         
-        // Actualizar último acceso
-        await setDoc(doc(db, 'usuarios', userCredential.user.uid), {
-            ultimoAcceso: serverTimestamp()
-        }, { merge: true });
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
 
-        return { success: true, user: userCredential.user };
+        if (error) throw error;
+
+        // Actualizar último acceso
+        if (data.user) {
+            await supabase
+                .from('usuarios')
+                .update({ ultimo_acceso: new Date().toISOString() })
+                .eq('id', data.user.id);
+        }
+
+        return { success: true, user: data.user };
     } catch (error) {
         console.error('Error en login:', error);
         return { success: false, error: error.message };
@@ -71,21 +87,25 @@ export const loginFeriante = async (rut, password) => {
 // Cerrar sesión
 export const logoutFeriante = async () => {
     try {
-        await signOut(auth);
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
         return { success: true };
     } catch (error) {
         return { success: false, error: error.message };
     }
 };
 
-// Obtener datos del usuario desde Firestore
+// Obtener datos del usuario
 export const getUsuarioDatos = async (uid) => {
     try {
-        const docSnap = await getDoc(doc(db, 'usuarios', uid));
-        if (docSnap.exists()) {
-            return { success: true, datos: docSnap.data() };
-        }
-        return { success: false, error: 'Usuario no encontrado' };
+        const { data, error } = await supabase
+            .from('usuarios')
+            .select('*')
+            .eq('id', uid)
+            .single();
+
+        if (error) throw error;
+        return { success: true, datos: data };
     } catch (error) {
         return { success: false, error: error.message };
     }
@@ -93,7 +113,7 @@ export const getUsuarioDatos = async (uid) => {
 
 // Observer de autenticación
 export const onAuthChange = (callback) => {
-    return onAuthStateChanged(auth, callback);
+    return supabase.auth.onAuthStateChange(callback);
 };
 
 // Validar RUT chileno
