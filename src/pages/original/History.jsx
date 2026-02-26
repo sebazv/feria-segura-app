@@ -1,40 +1,46 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Clock, MapPin, Shield, Plus, AlertTriangle, CheckCircle, XCircle, History } from 'lucide-react';
-
-// Demo history data
-const demoHistory = [
-  { id: 1, type: 'insecurity', location: 'Sector A - Puesto 23', lat: -33.4489, lng: -70.6693, time: '2026-02-26T02:30:00', status: 'resolved' },
-  { id: 2, type: 'medical', location: 'Sector B - Puesto 45', lat: -33.4495, lng: -70.6680, time: '2026-02-26T01:15:00', status: 'resolved' },
-  { id: 3, type: 'insecurity', location: 'Sector C - Puesto 12', lat: -33.4500, lng: -70.6700, time: '2026-02-25T22:45:00', status: 'resolved' },
-  { id: 4, type: 'medical', location: 'Sector A - Puesto 8', lat: -33.4485, lng: -70.6710, time: '2026-02-25T18:30:00', status: 'resolved' },
-  { id: 5, type: 'insecurity', location: 'Sector B - Puesto 31', lat: -33.4492, lng: -70.6698, time: '2026-02-25T14:20:00', status: 'resolved' },
-  { id: 6, type: 'insecurity', location: 'Sector A - Puesto 15', lat: -33.4487, lng: -70.6695, time: '2026-02-24T20:10:00', status: 'resolved' },
-  { id: 7, type: 'medical', location: 'Sector D - Puesto 7', lat: -33.4510, lng: -70.6720, time: '2026-02-24T16:45:00', status: 'resolved' },
-];
+import { Clock, MapPin, Shield, Plus, History, Loader } from 'lucide-react';
+import { getUserAlerts } from '../../lib/alerts';
+import { useAuth } from '../../App';
 
 export default function HistoryPage() {
-  const [history, setHistory] = useState(demoHistory);
+  const [history, setHistory] = useState([]);
   const [filter, setFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const { user } = useAuth();
 
-  // Load from localStorage on mount
   useEffect(() => {
-    const savedHistory = localStorage.getItem('alertHistory');
-    if (savedHistory) {
-      try {
-        setHistory(JSON.parse(savedHistory));
-      } catch (e) {
-        console.error('Error loading history:', e);
+    const loadAlerts = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
       }
-    }
-  }, []);
+
+      try {
+        const result = await getUserAlerts(user.id);
+        if (result.success) {
+          setHistory(result.alertas || []);
+        } else {
+          setError(result.error);
+        }
+      } catch (err) {
+        setError('Error al cargar historial');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAlerts();
+  }, [user]);
 
   const filteredHistory = history.filter(item => {
     if (filter === 'all') return true;
-    return item.type === filter;
+    return item.tipo === filter;
   });
 
   const formatDate = (dateString) => {
+    if (!dateString) return '';
     const date = new Date(dateString);
     const now = new Date();
     const diff = now - date;
@@ -52,13 +58,23 @@ export default function HistoryPage() {
 
   const stats = {
     total: history.length,
-    insecurity: history.filter(h => h.type === 'insecurity').length,
-    medical: history.filter(h => h.type === 'medical').length,
+    insecurity: history.filter(h => h.tipo === 'insecurity').length,
+    medical: history.filter(h => h.tipo === 'medical').length,
   };
+
+  if (loading) {
+    return (
+      <div className="p-4 pb-24 bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="w-8 h-8 animate-spin text-red-600 mx-auto mb-2" />
+          <p className="text-gray-500">Cargando historial...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 pb-24 bg-gray-50 dark:bg-gray-900 min-h-screen">
-      {/* Header */}
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-1">
           Mi Historial
@@ -68,7 +84,12 @@ export default function HistoryPage() {
         </p>
       </header>
 
-      {/* Stats */}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+          {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-md text-center">
           <p className="text-2xl font-bold text-gray-800 dark:text-white">{stats.total}</p>
@@ -84,7 +105,6 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      {/* Filter */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
         <button
           onClick={() => setFilter('all')}
@@ -118,41 +138,46 @@ export default function HistoryPage() {
         </button>
       </div>
 
-      {/* History List */}
       <div className="space-y-3">
         {filteredHistory.map((item) => (
           <div 
             key={item.id}
             className={`bg-white dark:bg-gray-800 rounded-xl shadow-md border-l-4 p-4 ${
-              item.type === 'insecurity' ? 'border-l-red-500' : 'border-l-blue-500'
+              item.tipo === 'insecurity' ? 'border-l-red-500' : 'border-l-blue-500'
             }`}
           >
             <div className="flex justify-between items-start mb-2">
               <div className="flex items-center gap-2">
                 <div className={`p-2 rounded-full ${
-                  item.type === 'insecurity' ? 'bg-red-100 dark:bg-red-900/30' : 'bg-blue-100 dark:bg-blue-900/30'
+                  item.tipo === 'insecurity' ? 'bg-red-100 dark:bg-red-900/30' : 'bg-blue-100 dark:bg-blue-900/30'
                 }`}>
-                  {item.type === 'insecurity' ? (
+                  {item.tipo === 'insecurity' ? (
                     <Shield className="w-4 h-4 text-red-600" />
                   ) : (
                     <Plus className="w-4 h-4 text-blue-600" />
                   )}
                 </div>
                 <span className="font-medium text-gray-800 dark:text-white capitalize">
-                  {item.type === 'insecurity' ? 'Inseguridad' : 'Emergencia Médica'}
+                  {item.tipo === 'insecurity' ? 'Inseguridad' : 'Emergencia Médica'}
                 </span>
               </div>
-              <CheckCircle className="w-5 h-5 text-green-500" />
+              <span className={`text-xs px-2 py-1 rounded-full ${
+                item.status === 'active' 
+                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                  : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+              }`}>
+                {item.status === 'active' ? 'Activa' : 'Resuelta'}
+              </span>
             </div>
             
             <div className="space-y-1">
               <p className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1">
                 <MapPin size={12} className="text-gray-400" />
-                {item.location}
+                Puesto: {item.puesto_numero || 'N/A'}
               </p>
               <p className="text-xs text-gray-400 flex items-center gap-1">
                 <Clock size={12} />
-                {formatDate(item.time)}
+                {formatDate(item.created_at)}
               </p>
             </div>
           </div>

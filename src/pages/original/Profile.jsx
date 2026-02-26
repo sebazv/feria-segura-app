@@ -1,21 +1,40 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../App';
-import { User, Phone, MapPin, LogOut, Shield, Settings, Clock, ShieldAlert } from 'lucide-react';
+import { getUserAlerts } from '../../lib/alerts';
+import { User, Phone, MapPin, LogOut, Shield, Settings, Clock, ShieldAlert, Loader } from 'lucide-react';
 
 export default function ProfilePage() {
     const navigate = useNavigate();
     const { user, userData, logout } = useAuth();
     const [stats, setStats] = useState({ total: 0, insecurity: 0, medical: 0 });
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Demo stats - en producción vendrían de Firebase
-        setStats({
-            total: 5,
-            insecurity: 3,
-            medical: 2
-        });
-    }, []);
+        const loadStats = async () => {
+            if (!user) {
+                setLoading(false);
+                return;
+            }
+
+            try {
+                const result = await getUserAlerts(user.id, 100);
+                if (result.success && result.alertas) {
+                    setStats({
+                        total: result.alertas.length,
+                        insecurity: result.alertas.filter(a => a.tipo === 'insecurity').length,
+                        medical: result.alertas.filter(a => a.tipo === 'medical').length
+                    });
+                }
+            } catch (err) {
+                console.error('Error loading stats:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadStats();
+    }, [user]);
 
     const handleLogout = async () => {
         if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
@@ -28,7 +47,7 @@ export default function ProfilePage() {
         return (
             <div className="p-4 pb-24 bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center">
                 <div className="text-center">
-                    <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <Loader className="w-8 h-8 animate-spin text-red-600 mx-auto mb-2" />
                     <p className="text-gray-500">Cargando...</p>
                 </div>
             </div>
@@ -70,7 +89,7 @@ export default function ProfilePage() {
                     </div>
                     <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
                         <MapPin size={18} className="text-gray-400" />
-                        <span>Puesto: {userData.puestoNumero}</span>
+                        <span>Puesto: {userData.puesto_numero || 'No asignado'}</span>
                     </div>
                     <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
                         <Shield size={18} className="text-gray-400" />

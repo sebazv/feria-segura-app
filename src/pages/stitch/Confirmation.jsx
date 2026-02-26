@@ -4,6 +4,8 @@ import { MapPin, Shield, Plus, Edit, Send, Home as HomeIcon, ZoomIn, ZoomOut, Na
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { sendAlert } from '../../lib/alerts';
+import { useAuth } from '../../App';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -36,12 +38,14 @@ function MapControls({ zoom, setZoom }) {
 export default function StitchConfirmation() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const { user, userData } = useAuth();
     const type = searchParams.get('type');
     const lat = parseFloat(searchParams.get('lat') || '0');
     const lng = parseFloat(searchParams.get('lng') || '0');
 
     const [sending, setSending] = useState(false);
     const [sent, setSent] = useState(false);
+    const [error, setError] = useState('');
     const [address, setAddress] = useState('');
     const [zoom, setZoom] = useState(16);
 
@@ -54,10 +58,36 @@ export default function StitchConfirmation() {
     }, [lat, lng]);
 
     const handleSendAlert = async () => {
+        if (!user || !userData) {
+            setError('Debes iniciar sesión para enviar alertas');
+            return;
+        }
+        
         setSending(true);
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        setSending(false);
-        setSent(true);
+        setError('');
+
+        try {
+            const result = await sendAlert({
+                tipo: type,
+                lat,
+                lng,
+                userId: user.id,
+                userName: userData.nombre,
+                userPhone: userData.telefono,
+                puestoNumero: userData.puesto_numero,
+                accuracy: 0
+            });
+
+            if (result.success) {
+                setSent(true);
+            } else {
+                setError(result.error || 'Error al enviar alerta');
+            }
+        } catch (err) {
+            setError('Error al enviar alerta');
+        } finally {
+            setSending(false);
+        }
     };
 
     const handleEditLocation = () => {
