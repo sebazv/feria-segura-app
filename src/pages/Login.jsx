@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Phone, MapPin, User, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
-import { registerFeriante, loginFeriante, validarRUT } from '../lib/auth';
+import { Shield, Phone, MapPin, User, Lock, Eye, EyeOff, ArrowRight, Mail } from 'lucide-react';
+import { registerFeriante, loginFeriante, validarEmail, validarTelefono } from '../lib/auth';
 
 export default function Login() {
     const navigate = useNavigate();
@@ -11,8 +11,7 @@ export default function Login() {
     const [error, setError] = useState('');
     
     const [formData, setFormData] = useState({
-        nombre: '',
-        rut: '',
+        email: '',
         telefono: '',
         puestoNumero: '',
         password: '',
@@ -32,14 +31,11 @@ export default function Login() {
         try {
             if (isRegister) {
                 // Validaciones de registro
-                if (!formData.nombre.trim()) {
-                    throw new Error('Ingresa tu nombre completo');
+                if (!validarEmail(formData.email)) {
+                    throw new Error('Ingresa un correo electrónico válido');
                 }
-                if (!validarRUT(formData.rut)) {
-                    throw new Error('RUT inválido');
-                }
-                if (!formData.telefono.trim()) {
-                    throw new Error('Ingresa tu número de teléfono');
+                if (!validarTelefono(formData.telefono)) {
+                    throw new Error('Ingresa un número de teléfono válido (9 dígitos)');
                 }
                 if (!formData.puestoNumero.trim()) {
                     throw new Error('Ingresa tu número de puesto');
@@ -52,10 +48,9 @@ export default function Login() {
                 }
 
                 const result = await registerFeriante({
-                    nombre: formData.nombre,
-                    rut: formData.rut,
-                    telefono: formData.telefono,
-                    puestoNumero: formData.puestoNumero,
+                    email: formData.email.toLowerCase().trim(),
+                    telefono: formData.telefono.trim(),
+                    puestoNumero: formData.puestoNumero.trim(),
                     password: formData.password
                 });
 
@@ -63,20 +58,33 @@ export default function Login() {
                     throw new Error(result.error);
                 }
 
-                navigate('/');
+                // Login automático después de registro
+                const loginResult = await loginFeriante(
+                    formData.email.toLowerCase().trim(),
+                    formData.password
+                );
+
+                if (!loginResult.success) {
+                    navigate('/');
+                } else {
+                    navigate('/');
+                }
             } else {
                 // Login
-                if (!formData.rut.trim()) {
-                    throw new Error('Ingresa tu RUT');
+                if (!validarEmail(formData.email)) {
+                    throw new Error('Ingresa un correo electrónico válido');
                 }
                 if (!formData.password.trim()) {
                     throw new Error('Ingresa tu contraseña');
                 }
 
-                const result = await loginFeriante(formData.rut, formData.password);
+                const result = await loginFeriante(
+                    formData.email.toLowerCase().trim(),
+                    formData.password
+                );
 
                 if (!result.success) {
-                    throw new Error(result.error);
+                    throw new Error(result.error || 'Credenciales incorrectas');
                 }
 
                 navigate('/');
@@ -88,23 +96,8 @@ export default function Login() {
         }
     };
 
-    const formatRUT = (value) => {
-        let rut = value.replace(/[^0-9kK]/g, '');
-        if (rut.length > 1) {
-            rut = rut.slice(0, -1) + '.' + rut.slice(-1);
-        }
-        if (rut.length > 5) {
-            rut = rut.slice(0, -5) + '.' + rut.slice(-5);
-        }
-        if (rut.length > 10) {
-            rut = rut.slice(0, -10) + '.' + rut.slice(-10);
-        }
-        return rut;
-    };
-
     return (
         <div className="min-h-screen bg-gradient-to-b from-red-600 to-red-800 flex flex-col">
-            {/* Header */}
             <div className="flex-1 flex flex-col items-center justify-center p-6">
                 <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">
                     {/* Logo/Title */}
@@ -131,33 +124,16 @@ export default function Login() {
                             <>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Nombre Completo
+                                        Correo Electrónico
                                     </label>
                                     <div className="relative">
-                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                         <input
-                                            type="text"
-                                            name="nombre"
-                                            value={formData.nombre}
+                                            type="email"
+                                            name="email"
+                                            value={formData.email}
                                             onChange={handleChange}
-                                            placeholder="Juan Pérez González"
-                                            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        RUT
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            name="rut"
-                                            value={formData.rut}
-                                            onChange={(e) => handleChange({ target: { name: 'rut', value: formatRUT(e.target.value) } })}
-                                            placeholder="12.345.678-5"
-                                            maxLength={12}
+                                            placeholder="correo@ejemplo.com"
                                             className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
                                         />
                                     </div>
@@ -202,16 +178,16 @@ export default function Login() {
                         {!isRegister && (
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    RUT
+                                    Correo Electrónico
                                 </label>
                                 <div className="relative">
+                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                     <input
-                                        type="text"
-                                        name="rut"
-                                        value={formData.rut}
-                                        onChange={(e) => handleChange({ target: { name: 'rut', value: formatRUT(e.target.value) } })}
-                                        placeholder="12.345.678-5"
-                                        maxLength={12}
+                                        type="email"
+                                        name="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        placeholder="correo@ejemplo.com"
                                         className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
                                     />
                                 </div>

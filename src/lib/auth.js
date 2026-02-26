@@ -1,30 +1,19 @@
 import { supabase } from './supabase/client';
 
-// Generar email desde RUT
-export const rutToEmail = (rut) => {
-    return `${rut.replace(/[^0-9kK]/g, '').toLowerCase()}@feria-segura.cl`;
-};
-
-// Registro de nuevo usuario feriante
+// Registro de nuevo usuario feriante (solo email + teléfono + puesto)
 export const registerFeriante = async ({ 
-    nombre, 
-    rut, 
+    email,
     telefono, 
     puestoNumero,
     password 
 }) => {
     try {
-        const rutLimpio = rut.replace(/[^0-9kK]/g, '').toLowerCase();
-        const email = rutToEmail(rut);
-        
         // Crear usuario en Auth de Supabase
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
             options: {
                 data: {
-                    nombre,
-                    rut: rutLimpio,
                     telefono,
                     puesto_numero: puestoNumero
                 }
@@ -32,23 +21,6 @@ export const registerFeriante = async ({
         });
 
         if (error) throw error;
-
-        // Guardar datos adicionales en tabla 'usuarios'
-        if (data.user) {
-            const { error: profileError } = await supabase
-                .from('usuarios')
-                .insert({
-                    id: data.user.id,
-                    nombre,
-                    rut: rutLimpio,
-                    telefono,
-                    puesto_numero: puestoNumero,
-                    role: 'feriante',
-                    activo: true
-                });
-
-            if (profileError) console.error('Error guardando perfil:', profileError);
-        }
 
         return { success: true, user: data.user };
     } catch (error) {
@@ -58,10 +30,8 @@ export const registerFeriante = async ({
 };
 
 // Login de feriante
-export const loginFeriante = async (rut, password) => {
+export const loginFeriante = async (email, password) => {
     try {
-        const email = rutToEmail(rut);
-        
         const { data, error } = await supabase.auth.signInWithPassword({
             email,
             password
@@ -116,24 +86,15 @@ export const onAuthChange = (callback) => {
     return supabase.auth.onAuthStateChange(callback);
 };
 
-// Validar RUT chileno
-export const validarRUT = (rut) => {
-    rut = rut.replace(/[^0-9kK]/g, '');
-    if (rut.length < 8) return false;
-    
-    const num = rut.slice(0, -1);
-    const dv = rut.slice(-1);
-    
-    let sum = 0;
-    let mul = 2;
-    
-    for (let i = num.length - 1; i >= 0; i--) {
-        sum += parseInt(num[i]) * mul;
-        mul = mul === 7 ? 2 : mul + 1;
-    }
-    
-    const rest = sum % 11;
-    const expectedDv = rest === 0 ? '0' : rest === 1 ? 'k' : String(11 - rest);
-    
-    return dv.toLowerCase() === expectedDv;
+// Validar email
+export const validarEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+};
+
+// Validar teléfono chileno
+export const validarTelefono = (telefono) => {
+    // Acepta: +56912345678, 56912345678, 912345678
+    const limpia = telefono.replace(/\s/g, '');
+    return /^(\+?56|0)?9[0-9]{8}$/.test(limpia);
 };

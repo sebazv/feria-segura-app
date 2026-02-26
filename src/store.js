@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 export const useStore = create((set) => ({
     darkMode: false,
-    useStitchUI: true,
+    useStitchUI: false, // Usar diseño original por defecto
     toggleDarkMode: () => set((state) => {
         const isDark = !state.darkMode;
         if (isDark) {

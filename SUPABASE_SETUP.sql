@@ -1,15 +1,11 @@
--- SQL COMPLETO para Feria Segura v2
--- Ejecuta esto en el SQL Editor de Supabase
+-- SQL para Feria Segura (sin RUT)
+-- Ejecuta en SQL Editor de Supabase
 
--- ========================
--- TABLAS BASE
--- ========================
-
--- 1. Tabla de usuarios
+-- 1. Tabla de usuarios (sin RUT)
 CREATE TABLE IF NOT EXISTS usuarios (
   id UUID PRIMARY KEY REFERENCES auth.users ON DELETE CASCADE,
   nombre TEXT,
-  rut TEXT UNIQUE,
+  email TEXT,
   telefono TEXT,
   puesto_numero TEXT,
   role TEXT DEFAULT 'feriante',
@@ -45,7 +41,7 @@ CREATE TABLE IF NOT EXISTS noticias (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. Tabla de mensajes (chat)
+-- 4. Tabla de mensajes
 CREATE TABLE IF NOT EXISTS mensajes (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES usuarios(id),
@@ -75,18 +71,7 @@ CREATE TABLE IF NOT EXISTS votos (
   UNIQUE(encuesta_id, user_id)
 );
 
--- 7. Tabla de puntos (incentivos)
-CREATE TABLE IF NOT EXISTS puntos (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES usuarios(id) UNIQUE,
-  puntos INTEGER DEFAULT 0,
-  nivel INTEGER DEFAULT 1,
-  alertas_enviadas INTEGER DEFAULT 0,
-  alertas_resueltas INTEGER DEFAULT 0,
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 8. Tabla de configuración
+-- 7. Tabla de configuración
 CREATE TABLE IF NOT EXISTS configuracion (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   hora_inicio TEXT DEFAULT '06:00',
@@ -97,88 +82,49 @@ CREATE TABLE IF NOT EXISTS configuracion (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ========================
--- RLS (SEGURIDAD)
--- ========================
-
+-- Habilitar RLS
 ALTER TABLE usuarios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE alertas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE noticias ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mensajes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE encuestas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE votos ENABLE ROW LEVEL SECURITY;
-ALTER TABLE puntos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE configuracion ENABLE ROW LEVEL SECURITY;
 
--- USUARIOS
+-- Políticas de acceso
 CREATE POLICY "Usuarios ven su perfil" ON usuarios FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Usuarios actualizan su perfil" ON usuarios FOR UPDATE USING (auth.uid() = id);
-
--- ALERTAS
+CREATE POLICY "Usuarios actualizan" ON usuarios FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "Usuarios ven sus alertas" ON alertas FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Usuarios crean alertas" ON alertas FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Admin ve todas las alertas" ON alertas FOR SELECT USING (EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND role = 'admin'));
-CREATE POLICY "Admin actualiza alertas" ON alertas FOR UPDATE USING (EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND role = 'admin'));
-
--- NOTICIAS
+CREATE POLICY "Admin ve todas" ON alertas FOR SELECT USING (EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Admin actualiza" ON alertas FOR UPDATE USING (EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND role = 'admin'));
 CREATE POLICY "Todos ven noticias" ON noticias FOR SELECT USING (activa = true);
-CREATE POLICY "Admin crea noticias" ON noticias FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND role = 'admin'));
-
--- MENSAJES
+CREATE POLICY "Admin noticias" ON noticias FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND role = 'admin'));
 CREATE POLICY "Todos ven mensajes" ON mensajes FOR SELECT USING (true);
-CREATE POLICY "Usuarios envian mensajes" ON mensajes FOR INSERT WITH CHECK (auth.uid() = user_id);
-
--- ENCUESTAS
+CREATE POLICY "Usuarios envian" ON mensajes FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Todos ven encuestas" ON encuestas FOR SELECT USING (activa = true);
-CREATE POLICY "Admin crea encuestas" ON encuestas FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND role = 'admin'));
-
--- VOTOS
+CREATE POLICY "Admin encuestas" ON encuestas FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND role = 'admin'));
 CREATE POLICY "Todos ven votos" ON votos FOR SELECT USING (true);
 CREATE POLICY "Usuarios votan" ON votos FOR INSERT WITH CHECK (auth.uid() = user_id);
-
--- PUNTOS
-CREATE POLICY "Usuarios ven sus puntos" ON puntos FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Usuarios actualizan puntos" ON puntos FOR UPDATE USING (auth.uid() = user_id);
-
--- CONFIGURACION
 CREATE POLICY "Todos ven config" ON configuracion FOR SELECT USING (true);
-CREATE POLICY "Admin modifica config" ON configuracion FOR UPDATE USING (EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Admin config" ON configuracion FOR UPDATE USING (EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND role = 'admin'));
 
--- ========================
--- FUNCIONES
--- ========================
-
+-- Trigger auto-crear usuario
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.usuarios (id, nombre, rut, telefono, puesto_numero, role)
-  VALUES (
-    NEW.id,
-    NEW.raw_user_meta_data->>'nombre',
-    NEW.raw_user_meta_data->>'rut',
-    NEW.raw_user_meta_data->>'telefono',
-    NEW.raw_user_meta_data->>'puesto_numero',
-    'feriante'
-  );
+  INSERT INTO public.usuarios (id, email, telefono, puesto_numero, role)
+  VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'telefono', NEW.raw_user_meta_data->>'puesto_numero', 'feriante');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- ========================
--- DATOS DE EJEMPLO
--- ========================
-
-INSERT INTO noticias (titulo, contenido) VALUES 
-('Bienvenidos a Feria Segura', 'Esta es la aplicación oficial del Sindicato de Peñaflor. ¡Juntos haremos más segura nuestra feria!');
-
-INSERT INTO encuestas (pregunta, opciones) VALUES 
-('¿Qué horario te parece mejor para la próxima asamblea?', '["Mañana (9:00 AM)", "Tarde (2:00 PM)", "Noche (6:00 PM)"]');
-
+-- Datos de ejemplo
+INSERT INTO noticias (titulo, contenido) VALUES ('Bienvenidos a Feria Segura', '¡Aplicación oficial del Sindicato de Peñaflor!');
+INSERT INTO encuestas (pregunta, opciones) VALUES ('¿Qué horario te parece mejor para la próxima asamblea?', '["Mañana (9:00 AM)", "Tarde (2:00 PM)", "Noche (6:00 PM)"]');
 INSERT INTO configuracion DEFAULT VALUES;
 
-PRINT('✅ Feria Segura v2 configurada correctamente');
+PRINT('✅ Feria Segura configurada (sin RUT)');
