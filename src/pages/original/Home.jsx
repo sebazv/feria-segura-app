@@ -117,9 +117,9 @@ export default function Home() {
                     <Vote size={20} className="text-gray-600 dark:text-gray-400" />
                     <span className="text-xs text-gray-500">Votar</span>
                 </button>
-                <button onClick={() => navigate('/profile')} className="flex flex-col items-center gap-1 p-2">
+                <button onClick={() => navigate('/login')} className="flex flex-col items-center gap-1 p-2">
                     <User size={20} className="text-gray-600 dark:text-gray-400" />
-                    <span className="text-xs text-gray-500">Perfil</span>
+                    <span className="text-xs text-gray-500">Ingresar</span>
                 </button>
             </nav>
         </div>

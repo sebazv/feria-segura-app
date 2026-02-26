@@ -145,35 +145,61 @@ function AppContent() {
                 </PublicRoute>
             } />
 
-            {/* Protected Routes */}
+            {/* Home - Public for emergencies */}
             <Route path="/" element={
-                <ProtectedRoute>
-                    <Layout />
-                </ProtectedRoute>
-            }>
-                <Route index element={<Home />} />
-                <Route path="history" element={<History />} />
-                <Route path="news" element={<News />} />
-                <Route path="chat" element={<Chat />} />
-                <Route path="encuestas" element={<Encuestas />} />
-                <Route path="profile" element={<Profile />} />
-            </Route>
+                <Layout>
+                    <Home />
+                </Layout>
+            } />
 
-            {/* Confirmation and Loading (protected) */}
-            <Route path="/confirmation" element={
+            {/* Protected Routes */}
+            <Route path="/history" element={
                 <ProtectedRoute>
-                    <Layout hideNav={true}>
-                        <Confirmation />
+                    <Layout>
+                        <History />
                     </Layout>
                 </ProtectedRoute>
             } />
-            
-            <Route path="/loading" element={
+            <Route path="/news" element={
                 <ProtectedRoute>
-                    <Layout hideNav={true}>
-                        <Loading />
+                    <Layout>
+                        <News />
                     </Layout>
                 </ProtectedRoute>
+            } />
+            <Route path="/chat" element={
+                <ProtectedRoute>
+                    <Layout>
+                        <Chat />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+            <Route path="/encuestas" element={
+                <ProtectedRoute>
+                    <Layout>
+                        <Encuestas />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+                <ProtectedRoute>
+                    <Layout>
+                        <Profile />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            {/* Loading and Confirmation - Public for emergencies */}
+            <Route path="/confirmation" element={
+                <Layout hideNav={true}>
+                    <Confirmation />
+                </Layout>
+            } />
+            
+            <Route path="/loading" element={
+                <Layout hideNav={true}>
+                    <Loading />
+                </Layout>
             } />
 
             {/* Admin Routes */}
