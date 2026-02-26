@@ -37,11 +37,11 @@ export default function Home() {
     };
 
     return (
-        <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh', fontFamily: 'system-ui,sans-serif' }}>
+        <div style={{ backgroundColor: '#e5e7eb', minHeight: '100vh', fontFamily: 'system-ui,sans-serif' }}>
             {/* Header */}
-            <header style={{ padding: '24px', textAlign: 'center', backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
-                <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#111827' }}>Feria Segura</h1>
-                <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>Sindicato de Peñaflor</p>
+            <header style={{ padding: '24px', textAlign: 'center', backgroundColor: '#dc2626', color: 'white' }}>
+                <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: 'white' }}>Feria Segura</h1>
+                <p style={{ fontSize: '14px', color: 'white', marginTop: '4px', opacity: 0.9 }}>Sindicato de Peñaflor</p>
             </header>
 
             {/* Status */}
@@ -51,12 +51,12 @@ export default function Home() {
                     alignItems: 'center', 
                     justifyContent: 'center', 
                     gap: '8px',
-                    padding: '8px 16px',
+                    padding: '12px 16px',
                     borderRadius: '9999px',
                     fontSize: '14px',
                     fontWeight: '500',
-                    backgroundColor: scheduleStatus.activo ? '#dcfce7' : '#f3f4f6',
-                    color: scheduleStatus.activo ? '#166534' : '#6b7280'
+                    backgroundColor: scheduleStatus.activo ? '#16a34a' : '#6b7280',
+                    color: 'white'
                 }}>
                     <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: scheduleStatus.activo ? '#16a34a' : '#9ca3af' }}></span>
                     {scheduleStatus.activo ? 'Activo • 06:00 - 17:00' : 'Inactivo'}
