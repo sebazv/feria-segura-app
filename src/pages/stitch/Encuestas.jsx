@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Vote, CheckCircle, Loader, Circle } from 'lucide-react';
 import { getEncuestas, getEncuestaConVotos, voteEncuesta } from '../../lib/comunidad';
-import { useAuth } from '../../App';
+import { useAuth } from '../../lib/auth';
 
 export default function EncuestasPage() {
     const [encuestas, setEncuestas] = useState([]);

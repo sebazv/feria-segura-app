@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Newspaper, Plus, Loader, Bell } from 'lucide-react';
 import { getNoticias, createNoticia } from '../../lib/comunidad';
-import { useAuth } from '../../App';
+import { useAuth } from '../../lib/auth';
 
 export default function NewsPage() {
     const [noticias, setNoticias] = useState([]);

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MessageSquare, Clock, Loader, Plus, Send } from 'lucide-react';
 import { getMensajes, sendMensaje, subscribeToMensajes } from '../../lib/comunidad';
-import { useAuth } from '../../App';
+import { useAuth } from '../../lib/auth';
 
 export default function ChatPage() {
     const [mensajes, setMensajes] = useState([]);

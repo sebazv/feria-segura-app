@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ShieldAlert, Plus, MapPin, Clock, Search, CheckCircle, Phone, Loader } from 'lucide-react';
 import { getAllAlerts, resolveAlert } from '../../lib/alerts';
-import { useAuth } from '../../App';
+import { useAuth } from '../../lib/auth';
 
 export default function AlertsPage() {
   const [filter, setFilter] = useState('all');

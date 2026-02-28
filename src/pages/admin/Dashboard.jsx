@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ShieldAlert, Plus, Users, BarChart3, Settings, MapPin, Clock, AlertTriangle, Download, Loader } from 'lucide-react';
 import { getAlertStats, exportAlertsToCSV } from '../../lib/alerts';
-import { useAuth } from '../../App';
+import { useAuth } from '../../lib/auth';
 
 export default function AdminDashboard() {
     const { userData } = useAuth();

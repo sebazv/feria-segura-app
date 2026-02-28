@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, LogOut, Settings, Shield, Award, Clock, Bell, Moon } from 'lucide-react';
-import { useAuth } from '../../App';
+import { useAuth } from '../../lib/auth';
 import { logoutFeriante } from '../../lib/auth';
 
 export default function ProfilePage() {

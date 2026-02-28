@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../App';
+import { useAuth } from '../../lib/auth';
 import { getUserAlerts } from '../../lib/alerts';
 import { User, Phone, MapPin, LogOut, Shield, Settings, Clock, ShieldAlert, Loader } from 'lucide-react';
 

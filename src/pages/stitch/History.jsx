@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Clock, MapPin, Shield, Plus, History, Loader } from 'lucide-react';
 import { getUserAlerts } from '../../lib/alerts';
-import { useAuth } from '../../App';
+import { useAuth } from '../../lib/auth';
 
 export default function HistoryPage() {
   const [history, setHistory] = useState([]);
