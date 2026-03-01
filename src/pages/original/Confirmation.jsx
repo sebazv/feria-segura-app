@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { sendAlert } from '../../lib/alerts';
+import { useAuth } from '../../lib/auth';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -30,6 +31,7 @@ function MapControls({ setZoom }) {
 export default function Confirmation() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const { user, userData } = useAuth();
     
     const type = searchParams.get('type') || 'insecurity';
     const lat = parseFloat(searchParams.get('lat') || '0');
@@ -45,6 +47,12 @@ export default function Confirmation() {
     const bgColorClass = type === 'insecurity' ? 'bg-red-600' : 'bg-blue-600';
 
     const handleSendAlert = async () => {
+        // Verificar que el usuario esté logueado
+        if (!user || !userData) {
+            setError('Debes iniciar sesión para enviar alertas');
+            return;
+        }
+        
         setSending(true);
         setError('');
 
@@ -53,10 +61,10 @@ export default function Confirmation() {
                 tipo: type,
                 lat,
                 lng,
-                userId: null,
-                userName: 'Usuario Anónimo',
-                userPhone: '',
-                puestoNumero: '',
+                userId: user.id,
+                userName: userData?.nombre || userData?.email?.split('@')[0] || 'Usuario',
+                userPhone: userData?.telefono || '',
+                puestoNumero: userData?.puesto_numero || '',
                 accuracy: 0
             });
 
@@ -75,15 +83,15 @@ export default function Confirmation() {
 
     if (sent) {
         return (
-            <div className="min-h-screen bg-green-50 flex flex-col items-center justify-center p-6">
+            <div className="min-h-screen bg-green-50 dark:bg-green-900 flex flex-col items-center justify-center p-6">
                 <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center shadow-lg mb-6">
                     <Check className="w-10 h-10 text-white" />
                 </div>
-                <h1 className="text-2xl font-bold text-gray-800 mb-2">✅ Alerta Enviada</h1>
-                <p className="text-gray-600 text-center mb-2">
+                <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">✅ Alerta Enviada</h1>
+                <p className="text-gray-600 dark:text-gray-300 text-center mb-2">
                     📍 {lat.toFixed(5)}, {lng.toFixed(5)}
                 </p>
-                <p className="text-gray-500 text-center mb-6">
+                <p className="text-gray-500 dark:text-gray-400 text-center mb-6">
                     {typeLabel} - El personal de seguridad ha sido notificado
                 </p>
                 <button
@@ -96,8 +104,29 @@ export default function Confirmation() {
         );
     }
 
+    // Si no está logueado, mostrar mensaje
+    if (!user) {
+        return (
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-6">
+                <div className="w-20 h-20 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mb-6">
+                    <Shield className="w-10 h-10 text-gray-400" />
+                </div>
+                <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">🔐 Inicia Sesión</h1>
+                <p className="text-gray-500 dark:text-gray-400 text-center mb-6">
+                    Debes iniciar sesión para poder enviar alertas de emergencia
+                </p>
+                <button
+                    onClick={() => navigate('/login')}
+                    className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-xl font-medium"
+                >
+                    Iniciar Sesión
+                </button>
+            </div>
+        );
+    }
+
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
             {/* Map */}
             <div className="h-48 relative">
                 <MapContainer
@@ -111,18 +140,18 @@ export default function Confirmation() {
                     <MapControls zoom={zoom} setZoom={setZoom} />
                 </MapContainer>
 
-                <div className="absolute bottom-3 left-3 right-3 bg-white rounded-xl p-3 shadow-lg z-[1000]">
+                <div className="absolute bottom-3 left-3 right-3 bg-white dark:bg-gray-800 rounded-xl p-3 shadow-lg z-[1000]">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <div className={`p-1.5 rounded-full ${type === 'insecurity' ? 'bg-red-100' : 'bg-blue-100'}`}>
                                 <TypeIcon className={`w-4 h-4 ${type === 'insecurity' ? 'text-red-600' : 'text-blue-600'}`} />
                             </div>
                             <div>
-                                <p className="text-xs font-medium">{typeLabel}</p>
+                                <p className="text-xs font-medium dark:text-white">{typeLabel}</p>
                                 <p className="text-xs text-gray-500">{lat.toFixed(5)}, {lng.toFixed(5)}</p>
                             </div>
                         </div>
-                        <button onClick={() => navigate(`/loading?type=${type}`)} className="p-1.5 rounded-full bg-gray-100">
+                        <button onClick={() => navigate(`/loading?type=${type}`)} className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-700">
                             <Edit size={14} />
                         </button>
                     </div>
@@ -131,8 +160,8 @@ export default function Confirmation() {
 
             {/* Content */}
             <div className="flex-1 p-4 flex flex-col">
-                <h1 className="text-xl font-bold text-gray-800 mb-2">Confirmar Alerta</h1>
-                <p className="text-gray-500 text-sm mb-4">¿La ubicación es correcta?</p>
+                <h1 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Confirmar Alerta</h1>
+                <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">¿La ubicación es correcta?</p>
 
                 {error && (
                     <div className="bg-red-100 text-red-600 px-4 py-2 rounded-lg mb-4 text-sm">
@@ -140,13 +169,13 @@ export default function Confirmation() {
                     </div>
                 )}
 
-                {/* Alert Info */}
-                <div className="bg-white rounded-xl p-4 mb-4 shadow-sm">
-                    <h3 className="font-medium text-gray-800 mb-2">📋 Detalles de la alerta</h3>
-                    <div className="space-y-2 text-sm text-gray-600">
-                        <p><span className="font-medium">Tipo:</span> {typeLabel}</p>
-                        <p><span className="font-medium">Ubicación:</span> {lat.toFixed(5)}, {lng.toFixed(5)}</p>
-                        <p><span className="font-medium">Fecha:</span> {new Date().toLocaleString('es-CL')}</p>
+                {/* User Info */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-4 shadow-sm">
+                    <h3 className="font-medium text-gray-800 dark:text-white mb-2">📋 Enviando como:</h3>
+                    <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                        <p><span className="font-medium">Usuario:</span> {userData?.nombre || user?.email}</p>
+                        <p><span className="font-medium">Puesto:</span> {userData?.puesto_numero || 'No asignado'}</p>
+                        <p><span className="font-medium">Teléfono:</span> {userData?.telefono || 'No registrado'}</p>
                     </div>
                 </div>
 
@@ -169,13 +198,13 @@ export default function Confirmation() {
                     </button>
                     <button
                         onClick={() => navigate(`/loading?type=${type}`)}
-                        className="w-full bg-gray-200 text-gray-700 py-2 rounded-xl font-medium"
+                        className="w-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-2 rounded-xl font-medium"
                     >
                         Cambiar ubicación
                     </button>
                     <button
                         onClick={() => navigate('/')}
-                        className="w-full text-gray-500 py-2"
+                        className="w-full text-gray-500 dark:text-gray-400 py-2"
                     >
                         Cancelar
                     </button>
