@@ -1,17 +1,32 @@
 import { useState, useEffect } from 'react';
 import { History as HistoryIcon, Loader, AlertTriangle, Shield, MapPin, CheckCircle, Clock } from 'lucide-react';
-import { getUserAlerts } from '../../lib/alerts';
+import { getUserAlerts, getAllAlerts } from '../../lib/alerts';
 import { useAuth } from '../../lib/auth';
 
 export default function HistoryPage() {
     const [alertas, setAlertas] = useState([]);
     const [loading, setLoading] = useState(true);
-    const { user } = useAuth();
+    const { user, userData } = useAuth();
 
     useEffect(() => {
         const loadAlerts = async () => {
-            if (user) {
+            // Si es admin, mostrar todas las alertas
+            if (userData?.role === 'admin') {
+                const result = await getAllAlerts();
+                if (result.success) {
+                    setAlertas(result.alertas);
+                }
+            } 
+            // Si hay usuario logueado, mostrar sus alertas
+            else if (user) {
                 const result = await getUserAlerts(user.id);
+                if (result.success) {
+                    setAlertas(result.alertas);
+                }
+            }
+            // Si no hay usuario, mostrar todas las alertas públicas
+            else {
+                const result = await getAllAlerts();
                 if (result.success) {
                     setAlertas(result.alertas);
                 }
@@ -20,7 +35,7 @@ export default function HistoryPage() {
         };
 
         loadAlerts();
-    }, [user]);
+    }, [user, userData]);
 
     const formatDate = (dateString) => {
         if (!dateString) return '';
@@ -77,26 +92,23 @@ export default function HistoryPage() {
     }
 
     return (
-        <div className="p-4 pb-24 bg-gray-50 min-h-screen">
+        <div className="p-4 pb-24 bg-gray-50 dark:bg-gray-900 min-h-screen">
             <header className="mb-4">
-                <h1 className="text-2xl font-bold text-gray-800 mb-1 flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-1 flex items-center gap-2">
                     <HistoryIcon size={24} />
                     Historial
                 </h1>
-                <p className="text-gray-500 text-sm">
-                    Tus alertas enviadas
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    {userData?.role === 'admin' ? 'Todas las alertas del sistema' : 'Tus alertas enviadas'}
                 </p>
             </header>
 
             {/* Alerts List */}
             <div className="space-y-3">
                 {alertas.length === 0 ? (
-                    <div className="bg-white rounded-xl p-8 text-center">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-8 text-center">
                         <HistoryIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-gray-500">No has enviado alertas</p>
-                        <p className="text-gray-400 text-sm mt-1">
-                            Usa el botón SOS en caso de emergencia
-                        </p>
+                        <p className="text-gray-500">No hay alertas registradas</p>
                     </div>
                 ) : (
                     alertas.map((alerta) => {
@@ -108,7 +120,7 @@ export default function HistoryPage() {
                         return (
                             <div 
                                 key={alerta.id} 
-                                className="bg-white rounded-xl p-4 shadow-md"
+                                className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md"
                             >
                                 <div className="flex items-start justify-between mb-3">
                                     <div className="flex items-center gap-3">
@@ -116,7 +128,7 @@ export default function HistoryPage() {
                                             <TypeIcon className={`w-5 h-5 ${typeInfo.textColor}`} />
                                         </div>
                                         <div>
-                                            <h3 className="font-bold text-gray-800">
+                                            <h3 className="font-bold text-gray-800 dark:text-white">
                                                 {typeInfo.label}
                                             </h3>
                                             <p className="text-gray-500 text-xs">
@@ -134,7 +146,7 @@ export default function HistoryPage() {
                                     </span>
                                 </div>
 
-                                <div className="flex items-center gap-2 text-gray-500 text-sm">
+                                <div className="flex items-center gap-2 text-gray-500 text-sm dark:text-gray-400">
                                     <MapPin size={14} />
                                     <span>
                                         {alerta.lat?.toFixed(5)}, {alerta.lng?.toFixed(5)}
@@ -142,14 +154,14 @@ export default function HistoryPage() {
                                 </div>
 
                                 {alerta.puesto_numero && (
-                                    <div className="mt-2 text-gray-500 text-sm">
+                                    <div className="mt-2 text-gray-500 text-sm dark:text-gray-400">
                                         📍 Puesto #{alerta.puesto_numero}
                                     </div>
                                 )}
 
-                                {alerta.user_phone && (
-                                    <div className="mt-1 text-gray-500 text-sm">
-                                        📞 {alerta.user_phone}
+                                {alerta.user_name && (
+                                    <div className="mt-1 text-gray-500 text-sm dark:text-gray-400">
+                                        👤 {alerta.user_name}
                                     </div>
                                 )}
                             </div>
