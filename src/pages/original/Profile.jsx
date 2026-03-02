@@ -1,23 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, LogOut, Settings, Shield, Award, Clock, Bell, Moon, Sun } from 'lucide-react';
+import { User, Settings, Shield, Award, Clock, Bell, Moon, Sun, Trash2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { useStore } from '../../store';
-import { logoutFeriante } from '../../lib/auth';
 
 export default function ProfilePage() {
     const navigate = useNavigate();
     const { user, userData } = useAuth();
     const { darkMode, toggleDarkMode } = useStore();
-    const [loading, setLoading] = useState(false);
-
-    const handleLogout = async () => {
-        if (confirm('¿Cerrar sesión?')) {
-            setLoading(true);
-            await logoutFeriante();
-            navigate('/login');
-        }
-    };
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const getNivelInfo = (nivel) => {
         const niveles = {
@@ -34,7 +25,7 @@ export default function ProfilePage() {
     const nivelInfo = getNivelInfo(nivel);
 
     if (!user) {
-        navigate('/login');
+        navigate('/registro');
         return null;
     }
 
@@ -48,15 +39,25 @@ export default function ProfilePage() {
                     </div>
                     <div className="flex-1">
                         <h1 className="text-xl font-bold text-gray-800 dark:text-white">
-                            {userData?.nombre || user?.email?.split('@')[0]}
+                            {userData?.nombre || 'Usuario'}
                         </h1>
                         <p className="text-gray-500 dark:text-gray-400 text-sm">
-                            {userData?.puesto_numero ? `Puesto #${userData.puesto_numero}` : 'Feriante'}
+                            {userData?.telefono || 'Sin teléfono'}
                         </p>
                         <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${nivelInfo.bg} ${nivelInfo.color}`}>
                             🏆 Nivel {nivel} - {nivelInfo.nombre}
                         </span>
                     </div>
+                </div>
+            </div>
+
+            {/* Estado badge */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md mb-4">
+                <div className="flex items-center justify-between">
+                    <span className="text-gray-600 dark:text-gray-300">Estado de cuenta</span>
+                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-bold">
+                        ✓ Activa
+                    </span>
                 </div>
             </div>
 
@@ -106,11 +107,11 @@ export default function ProfilePage() {
                             <span className="text-gray-800 dark:text-white">Panel de Admin</span>
                         </button>
                         <button 
-                            onClick={() => navigate('/admin/alerts')}
+                            onClick={() => navigate('/admin/users')}
                             className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700"
                         >
                             <Bell className="w-5 h-5 text-gray-500" />
-                            <span className="text-gray-800 dark:text-white">Ver Alertas</span>
+                            <span className="text-gray-800 dark:text-white">Gestionar Usuarios</span>
                         </button>
                     </>
                 )}
@@ -124,20 +125,55 @@ export default function ProfilePage() {
                 </button>
             </div>
 
-            {/* Logout */}
+            {/* Confirmación de eliminación */}
+            {showDeleteConfirm && (
+                <div className="bg-red-50 dark:bg-red-900/30 rounded-xl p-4 shadow-md mb-4 border-2 border-red-300">
+                    <div className="flex items-center gap-2 mb-3">
+                        <AlertTriangle className="text-red-600" size={20} />
+                        <p className="font-bold text-red-800 dark:text-red-400">¿Eliminar mi cuenta?</p>
+                    </div>
+                    <p className="text-sm text-red-700 dark:text-red-300 mb-3">
+                        Perderás acceso a la app y todos tus datos. Esta acción no se puede deshacer.
+                    </p>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={async () => {
+                                try {
+                                    const { supabase } = await import('../../lib/supabase/client');
+                                    await supabase.auth.admin.deleteUser(user.id);
+                                    window.location.href = '/';
+                                } catch (err) {
+                                    console.error(err);
+                                    alert('Error al eliminar cuenta');
+                                }
+                            }}
+                            className="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold"
+                        >
+                            Sí, eliminar
+                        </button>
+                        <button
+                            onClick={() => setShowDeleteConfirm(false)}
+                            className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-2 rounded-lg font-medium"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Eliminar cuenta */}
             <button 
-                onClick={handleLogout}
-                disabled={loading}
+                onClick={() => setShowDeleteConfirm(true)}
                 className="w-full flex items-center justify-center gap-2 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 p-4 rounded-xl font-medium"
             >
-                <LogOut size={20} />
-                {loading ? 'Cerrando...' : 'Cerrar Sesión'}
+                <Trash2 size={20} />
+                Eliminar mi cuenta
             </button>
 
             {/* App Info */}
             <div className="text-center mt-6 text-gray-400 dark:text-gray-500 text-xs">
                 <p>Feria Segura v1.0.0</p>
-                <p>Desarrollado por SZV</p>
+                <p>Sesión automática activada</p>
             </div>
         </div>
     );

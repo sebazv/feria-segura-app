@@ -42,7 +42,7 @@ function AppLayout({ children }) {
     );
 }
 
-// Protected Route - checks user status
+// Protected Route - checks user status (ACTIVO required)
 function ProtectedRoute({ children, requireAdmin = false }) {
     const { user, userData, loading } = useAuth();
     
@@ -54,15 +54,17 @@ function ProtectedRoute({ children, requireAdmin = false }) {
         );
     }
     
+    // No hay usuario -> ir a registro
     if (!user) {
-        return <Navigate to="/login" replace />;
+        return <Navigate to="/registro" replace />;
     }
     
-    // Check if user is approved
+    // Usuario no aprobado -> pantalla de espera
     if (userData?.estado !== 'ACTIVO') {
-        return <Navigate to="/pendiente" replace />;
+        return <Navigate to="/registro" replace />;
     }
     
+    // Verificar rol admin
     if (requireAdmin && userData?.role !== 'admin') {
         return <Navigate to="/" replace />;
     }
@@ -83,10 +85,7 @@ export default function App() {
                         <Route path="/loading" element={<Loading />} />
                         <Route path="/confirmation" element={<Confirmation />} />
                         
-                        {/* Pending Approval Route */}
-                        <Route path="/pendiente" element={<RegistrationFlow />} />
-                        
-                        {/* Protected Routes */}
+                        {/* Protected Routes - require ACTIVO status */}
                         <Route path="/history" element={
                             <ProtectedRoute>
                                 <History />
