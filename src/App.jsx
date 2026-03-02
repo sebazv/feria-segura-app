@@ -128,6 +128,11 @@ export default function App() {
                                 <AdminUsers />
                             </ProtectedRoute>
                         } />
+                        <Route path="/users" element={
+                            <ProtectedRoute requireAdmin>
+                                <AdminUsers />
+                            </ProtectedRoute>
+                        } />
                         <Route path="/admin/notifications" element={
                             <ProtectedRoute requireAdmin>
                                 <AdminNotifications />
