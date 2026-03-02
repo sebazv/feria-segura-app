@@ -5,6 +5,7 @@ import BottomNav from './components/BottomNav';
 // Pages
 import Home from './pages/original/Home';
 import Login from './pages/Login';
+import RegistrationFlow from './pages/RegistrationFlow';
 import Loading from './pages/original/Loading';
 import Confirmation from './pages/original/Confirmation';
 import History from './pages/original/History';
@@ -19,6 +20,7 @@ import AdminAlerts from './pages/admin/Alerts';
 import AdminUsers from './pages/admin/Users';
 import AdminSettings from './pages/admin/Settings';
 import AdminMap from './pages/admin/Map';
+import AdminNotifications from './pages/admin/Notifications';
 
 // Layout with Bottom Nav
 function AppLayout({ children }) {
@@ -40,7 +42,7 @@ function AppLayout({ children }) {
     );
 }
 
-// Protected Route Wrapper
+// Protected Route - checks user status
 function ProtectedRoute({ children, requireAdmin = false }) {
     const { user, userData, loading } = useAuth();
     
@@ -54,6 +56,11 @@ function ProtectedRoute({ children, requireAdmin = false }) {
     
     if (!user) {
         return <Navigate to="/login" replace />;
+    }
+    
+    // Check if user is approved
+    if (userData?.estado !== 'ACTIVO') {
+        return <Navigate to="/pendiente" replace />;
     }
     
     if (requireAdmin && userData?.role !== 'admin') {
@@ -72,8 +79,12 @@ export default function App() {
                         {/* Public Routes */}
                         <Route path="/" element={<Home />} />
                         <Route path="/login" element={<Login />} />
+                        <Route path="/registro" element={<RegistrationFlow />} />
                         <Route path="/loading" element={<Loading />} />
                         <Route path="/confirmation" element={<Confirmation />} />
+                        
+                        {/* Pending Approval Route */}
+                        <Route path="/pendiente" element={<RegistrationFlow />} />
                         
                         {/* Protected Routes */}
                         <Route path="/history" element={
@@ -116,6 +127,11 @@ export default function App() {
                         <Route path="/admin/users" element={
                             <ProtectedRoute requireAdmin>
                                 <AdminUsers />
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/admin/notifications" element={
+                            <ProtectedRoute requireAdmin>
+                                <AdminNotifications />
                             </ProtectedRoute>
                         } />
                         <Route path="/admin/settings" element={
