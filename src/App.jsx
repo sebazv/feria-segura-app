@@ -22,18 +22,9 @@ import AdminSettings from './pages/admin/Settings';
 import AdminMap from './pages/admin/Map';
 import AdminNotifications from './pages/admin/Notifications';
 
-// Layout with Bottom Nav
+// Layout with Bottom Nav - NO SPINNER, show content immediately
 function AppLayout({ children }) {
-    const { user, loading } = useAuth();
-    
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-            </div>
-        );
-    }
-
+    const { user } = useAuth();
     return (
         <>
             {children}
@@ -46,6 +37,7 @@ function AppLayout({ children }) {
 function ProtectedRoute({ children, requireAdmin = false }) {
     const { user, userData, loading } = useAuth();
     
+    // While loading, allow access to home but protect other routes
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -54,17 +46,17 @@ function ProtectedRoute({ children, requireAdmin = false }) {
         );
     }
     
-    // No hay usuario -> ir a registro
+    // No user -> registro
     if (!user) {
         return <Navigate to="/registro" replace />;
     }
     
-    // Usuario no aprobado -> pantalla de espera
+    // User not approved -> registro
     if (userData?.estado !== 'ACTIVO') {
         return <Navigate to="/registro" replace />;
     }
     
-    // Verificar rol admin
+    // Admin check
     if (requireAdmin && userData?.role !== 'admin') {
         return <Navigate to="/" replace />;
     }
@@ -78,14 +70,14 @@ export default function App() {
             <Router>
                 <AppLayout>
                     <Routes>
-                        {/* Public Routes */}
+                        {/* Public Routes - always accessible */}
                         <Route path="/" element={<Home />} />
                         <Route path="/login" element={<Login />} />
                         <Route path="/registro" element={<RegistrationFlow />} />
                         <Route path="/loading" element={<Loading />} />
                         <Route path="/confirmation" element={<Confirmation />} />
                         
-                        {/* Protected Routes - require ACTIVO status */}
+                        {/* Protected Routes */}
                         <Route path="/history" element={
                             <ProtectedRoute>
                                 <History />
@@ -149,7 +141,6 @@ export default function App() {
                             </ProtectedRoute>
                         } />
                         
-                        {/* Catch-all */}
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                 </AppLayout>
