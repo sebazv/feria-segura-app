@@ -11,57 +11,38 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [userData, setUserData] = useState(null);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
 
-    // Load user on mount
     useEffect(() => {
-        const loadUser = async () => {
-            setLoading(true);
+        // Check localStorage for saved user
+        const savedUserId = localStorage.getItem('feria_user_id');
+        const savedUserData = localStorage.getItem('feria_user_data');
+        
+        if (savedUserId && savedUserData) {
             try {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session?.user) {
-                    setUser(session.user);
-                    const { data } = await supabase
-                        .from('usuarios')
-                        .select('*')
-                        .eq('id', session.user.id)
-                        .single();
-                    setUserData(data);
-                }
-            } catch (e) {
-                console.log('Auth load error:', e);
-            }
-            setLoading(false);
-        };
-        loadUser();
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (session?.user) {
-                setUser(session.user);
-                const { data } = await supabase
-                    .from('usuarios')
-                    .select('*')
-                    .eq('id', session.user.id)
-                    .single();
+                const data = JSON.parse(savedUserData);
+                setUser({ id: savedUserId });
                 setUserData(data);
-            } else {
-                setUser(null);
-                setUserData(null);
+            } catch (e) {
+                localStorage.removeItem('feria_user_id');
+                localStorage.removeItem('feria_user_data');
             }
-        });
-
-        return () => subscription.unsubscribe();
+        }
+        setLoading(false);
     }, []);
 
-    const login = (userData) => {
-        setUser(user);
+    const login = (userId, userData) => {
+        setUser({ id: userId });
         setUserData(userData);
+        localStorage.setItem('feria_user_id', userId);
+        localStorage.setItem('feria_user_data', JSON.stringify(userData));
     };
 
-    const logout = async () => {
-        await supabase.auth.signOut();
+    const logout = () => {
         setUser(null);
         setUserData(null);
+        localStorage.removeItem('feria_user_id');
+        localStorage.removeItem('feria_user_data');
     };
 
     return (

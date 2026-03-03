@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Loader } from 'lucide-react';
 import { supabase } from '../lib/supabase/client';
+import { useAuth } from '../lib/auth';
 
 export default function Login() {
     const navigate = useNavigate();
+    const { login } = useAuth();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [telefono, setTelefono] = useState('');
@@ -21,7 +23,6 @@ export default function Login() {
         }
 
         try {
-            // Find user by phone first
             const telefonoLimpio = telefono.replace(/\s/g, '').replace(/^\+56/, '');
             
             const { data: usuarios } = await supabase
@@ -44,51 +45,11 @@ export default function Login() {
                 return;
             }
 
-            // Generate a fake email for this phone number
-            const fakeEmail = `user_${telefonoLimpio}@feria-segura.app`;
+            // Save user to localStorage and state
+            login(usuario.id, usuario);
             
-            // Try to sign in - if it fails, try sign up
-            let authData;
-            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-                email: fakeEmail,
-                password: 'temp_password_' + telefonoLimpio
-            });
-
-            if (signInError) {
-                // User doesn't exist, create them
-                const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-                    email: fakeEmail,
-                    password: 'temp_password_' + telefonoLimpio,
-                    options: {
-                        data: {
-                            telefono: telefonoLimpio,
-                            nombre: usuario.nombre || 'Usuario'
-                        }
-                    }
-                });
-
-                if (signUpError) {
-                    // Try to sign in anyway
-                    const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
-                        email: fakeEmail,
-                        password: 'temp_password_' + telefonoLimpio
-                    });
-                    
-                    if (retryError) {
-                        setError('Error al iniciar sesión. Intenta de nuevo.');
-                        setLoading(false);
-                        return;
-                    }
-                    authData = retryData;
-                } else {
-                    authData = signUpData;
-                }
-            } else {
-                authData = signInData;
-            }
-
-            // Success - reload to update auth
-            window.location.reload();
+            // Navigate to home
+            navigate('/');
 
         } catch (err) {
             console.error('Login error:', err);
