@@ -1,8 +1,3 @@
-/**
- * Login.jsx
- * Simple login - just enter phone number
- */
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Phone, ArrowRight, Loader } from 'lucide-react';
@@ -26,31 +21,23 @@ export default function Login() {
         }
 
         try {
-            // Clean phone number - remove +56, spaces, etc
             const telefonoLimpio = telefono.replace(/\s/g, '').replace(/^\+56/, '');
             
-            // Find user by phone (flexible search)
-            const { data: usuarios, error: findError } = await supabase
+            const { data: usuarios } = await supabase
                 .from('usuarios')
                 .select('*')
                 .or(`telefono.eq.${telefonoLimpio},telefono.eq.+56${telefonoLimpio},telefono.eq.56${telefonoLimpio}`)
                 .limit(1);
 
-            if (findError) {
-                console.log('Search error:', findError);
-            }
-
-            // Also try with +
             let usuario = usuarios?.[0];
             
             if (!usuario) {
-                // Try partial match
-                const { data: usuariosParcial } = await supabase
+                const { data: parcial } = await supabase
                     .from('usuarios')
                     .select('*')
                     .like('telefono', `%${telefonoLimpio.slice(-9)}%`)
                     .limit(1);
-                usuario = usuariosParcial?.[0];
+                usuario = parcial?.[0];
             }
 
             if (!usuario) {
@@ -60,13 +47,13 @@ export default function Login() {
             }
 
             if (usuario.estado !== 'ACTIVO') {
-                setError('Tu cuenta está pendiente de aprobación. Te notificaremos cuando estés aprobado.');
+                setError('Tu cuenta está pendiente de aprobación.');
                 setLoading(false);
                 return;
             }
 
-            // Success - navigate to home (user stays logged in via session)
-            navigate('/');
+            // Login successful - reload the page to update auth state
+            window.location.href = '/';
 
         } catch (err) {
             console.error('Login error:', err);
@@ -78,13 +65,11 @@ export default function Login() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header */}
             <div className="bg-red-600 text-white p-6 text-center">
                 <h1 className="text-2xl font-bold">🛡️ Feria Segura</h1>
                 <p className="text-red-100 mt-1">Iniciar Sesión</p>
             </div>
 
-            {/* Login Form */}
             <form onSubmit={handleSubmit} className="p-6 max-w-lg mx-auto">
                 {error && (
                     <div className="bg-red-100 border-2 border-red-400 text-red-800 p-4 rounded-xl mb-6">
@@ -92,12 +77,8 @@ export default function Login() {
                     </div>
                 )}
 
-                {/* Campo: Teléfono */}
                 <div className="mb-8">
-                    <label 
-                        htmlFor="telefono" 
-                        className="block text-xl font-bold text-gray-800 mb-2"
-                    >
+                    <label htmlFor="telefono" className="block text-xl font-bold text-gray-800 mb-2">
                         📱 Ingresa tu número de celular
                     </label>
                     <input
@@ -112,7 +93,6 @@ export default function Login() {
                     <p className="text-sm text-gray-500 mt-1">9 dígitos sin espacios</p>
                 </div>
 
-                {/* Botón */}
                 <button
                     type="submit"
                     disabled={loading}
@@ -131,20 +111,14 @@ export default function Login() {
                     )}
                 </button>
 
-                {/* Link to register */}
                 <p className="text-center mt-6 text-lg text-gray-600">
                     ¿No tienes cuenta?{' '}
-                    <button
-                        type="button"
-                        onClick={() => navigate('/registro')}
-                        className="text-red-600 font-bold underline"
-                    >
+                    <button type="button" onClick={() => navigate('/registro')} className="text-red-600 font-bold underline">
                         Regístrate aquí
                     </button>
                 </p>
             </form>
 
-            {/* Help */}
             <div className="p-6 bg-blue-50 m-6 rounded-2xl">
                 <p className="text-lg text-blue-800 font-bold mb-2">💡 ¿Necesitas ayuda?</p>
                 <p className="text-lg text-blue-700">Llama al <span className="font-bold">600 300 4040</span></p>
