@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Send, Loader, Settings, Lock, Unlock, Users } from 'lucide-react';
+import { MessageCircle, Send, Loader, Lock, Unlock, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase/client';
 import { useAuth } from '../../lib/auth';
 
@@ -13,6 +13,7 @@ export default function ChatPage() {
     const { user, userData } = useAuth();
     const messagesEndRef = useRef(null);
     const channelRef = useRef(null);
+    const subscribedRef = useRef(false);
 
     useEffect(() => {
         const loadData = async () => {
@@ -34,7 +35,7 @@ export default function ChatPage() {
                 .from('mensajes')
                 .select('*')
                 .order('created_at', { ascending: true })
-                .limit(100);
+                .limit(200);
 
             if (result.data) {
                 setMensajes(result.data);
@@ -44,22 +45,24 @@ export default function ChatPage() {
 
         loadData();
 
-        channelRef.current = supabase
-            .channel('mensajes-chat')
-            .on('postgres_changes', { 
-                event: 'INSERT', 
-                schema: 'public', 
-                table: 'mensajes' 
-            }, (payload) => {
-                setMensajes(prev => [...prev, payload.new]);
-            })
-            .subscribe();
-
-        return () => {
-            if (channelRef.current) {
-                supabase.removeChannel(channelRef.current);
-            }
-        };
+        if (!subscribedRef.current) {
+            subscribedRef.current = true;
+            channelRef.current = supabase
+                .channel('mensajes-global')
+                .on('postgres_changes', { 
+                    event: 'INSERT', 
+                    schema: 'public', 
+                    table: 'mensajes' 
+                }, (payload) => {
+                    setMensajes(prev => {
+                        if (prev.some(m => m.id === payload.new.id)) {
+                            return prev;
+                        }
+                        return [...prev, payload.new];
+                    });
+                })
+                .subscribe();
+        }
     }, [userData?.role]);
 
     useEffect(() => {
@@ -74,6 +77,19 @@ export default function ChatPage() {
             .eq('id', 'global');
         
         setChatActivo(nuevoEstado);
+    };
+
+    const borrarTodosMensajes = async () => {
+        if (!confirm('¿Borrar todos los mensajes?')) return;
+        
+        const { error } = await supabase
+            .from('mensajes')
+            .delete()
+            .neq('id', '00000000-0000-0000-0000-000000000000');
+        
+        if (!error) {
+            setMensajes([]);
+        }
     };
 
     const handleSend = async (e) => {
@@ -103,7 +119,7 @@ export default function ChatPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="min-h-screen bg-red-50 flex items-center justify-center">
                 <Loader className="w-10 h-10 animate-spin text-red-600" />
             </div>
         );
@@ -118,47 +134,42 @@ export default function ChatPage() {
                 <h1 className="text-3xl font-bold text-gray-700 text-center mb-4">
                     🔒 Chat Desactivado
                 </h1>
-                <p className="text-xl text-gray-500 text-center">
-                    El chat está temporalmente deshabilitado<br/>por el administrador
-                </p>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
-            <header className="bg-white shadow-sm p-4 sticky top-0 z-10">
+        <div className="min-h-screen bg-red-50 flex flex-col">
+            <header className="bg-red-600 p-4 sticky top-0 z-10">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center">
-                            <MessageCircle className="w-6 h-6 text-white" />
+                        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
+                            <MessageCircle className="w-6 h-6 text-red-600" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-800">Chat en Vivo</h1>
-                            <p className="text-sm text-gray-500 flex items-center gap-1">
-                                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                                {mensajes.length} mensajes
-                            </p>
+                            <h1 className="text-2xl font-bold text-white">Chat</h1>
+                            <p className="text-sm text-red-200">{mensajes.length} mensajes</p>
                         </div>
                     </div>
 
                     {esAdmin && (
-                        <button
-                            onClick={toggleChat}
-                            className={`p-3 rounded-xl ${chatActivo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
-                        >
-                            {chatActivo ? <Lock size={24} /> : <Unlock size={24} />}
-                        </button>
+                        <div className="flex gap-2">
+                            <button onClick={toggleChat} className="p-3 bg-white/20 rounded-xl">
+                                {chatActivo ? <Lock size={20} className="text-white" /> : <Unlock size={20} className="text-white" />}
+                            </button>
+                            <button onClick={borrarTodosMensajes} className="p-3 bg-white/20 rounded-xl">
+                                <Trash2 size={20} className="text-white" />
+                            </button>
+                        </div>
                     )}
                 </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-24">
                 {mensajes.length === 0 ? (
                     <div className="text-center py-12">
-                        <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                        <p className="text-xl text-gray-500">No hay mensajes aún</p>
-                        <p className="text-lg text-gray-400">¡Sé el primero en escribir!</p>
+                        <MessageCircle className="w-16 h-16 text-red-300 mx-auto mb-4" />
+                        <p className="text-xl text-red-400">No hay mensajes</p>
                     </div>
                 ) : (
                     mensajes.map((msg) => {
@@ -198,20 +209,16 @@ export default function ChatPage() {
                         type="text"
                         value={newMensaje}
                         onChange={(e) => setNewMensaje(e.target.value)}
-                        placeholder="Escribe un mensaje..."
+                        placeholder="Escribe..."
                         className="flex-1 text-lg p-4 border-2 border-gray-200 rounded-2xl focus:border-red-500 focus:outline-none"
-                        disabled={sending}
+                        disabled={sending || !chatActivo}
                     />
                     <button
                         type="submit"
-                        disabled={!newMensaje.trim() || sending}
+                        disabled={!newMensaje.trim() || sending || !chatActivo}
                         className="bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white p-4 rounded-2xl"
                     >
-                        {sending ? (
-                            <Loader className="w-6 h-6 animate-spin" />
-                        ) : (
-                            <Send size={24} />
-                        )}
+                        <Send size={24} />
                     </button>
                 </form>
             </div>
