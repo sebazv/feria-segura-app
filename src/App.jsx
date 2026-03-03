@@ -22,31 +22,29 @@ import AdminSettings from './pages/admin/Settings';
 import AdminMap from './pages/admin/Map';
 import AdminNotifications from './pages/admin/Notifications';
 
-// Layout with Bottom Nav
+// Layout - always show nav, check auth for protected features
 function AppLayout({ children }) {
-    const { user } = useAuth();
     return (
         <>
             {children}
-            {user && <BottomNav />}
+            <BottomNav />
         </>
     );
 }
 
-// Protected Route - allow navigation, just check auth
+// Protected Route
 function ProtectedRoute({ children, requireAdmin = false }) {
     const { user, userData } = useAuth();
     
-    // Allow access if user exists and is approved
-    if (user && userData?.estado === 'ACTIVO') {
-        if (requireAdmin && userData?.role !== 'admin') {
-            return <Navigate to="/" replace />;
-        }
-        return children;
+    if (!user || userData?.estado !== 'ACTIVO') {
+        return <Navigate to="/login" replace />;
     }
     
-    // Not logged in or not approved -> registration
-    return <Navigate to="/registro" replace />;
+    if (requireAdmin && userData?.role !== 'admin') {
+        return <Navigate to="/" replace />;
+    }
+    
+    return children;
 }
 
 export default function App() {
