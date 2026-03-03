@@ -1,9 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
-import { Shield, AlertTriangle, Phone, MapPin, Info, Clock, Bell } from 'lucide-react';
+import { Shield, AlertTriangle, Phone, MapPin, Info, Clock, Bell, User, LogIn } from 'lucide-react';
+import { useAuth } from '../../lib/auth';
 
 export default function Home() {
     const navigate = useNavigate();
+    const { user, userData } = useAuth();
     const [holdProgress, setHoldProgress] = useState(0);
     const [isHolding, setIsHolding] = useState(null);
     const [showInfo, setShowInfo] = useState(false);
@@ -65,13 +67,75 @@ export default function Home() {
         return '🌙 Buena noche';
     };
 
+    // If logged in and active, show the app
+    const isLoggedIn = user && userData?.estado === 'ACTIVO';
+
     return (
-        <div style={{ backgroundColor: 'var(--bg-color, #f3f4f6)', minHeight: '100vh', paddingBottom: '80px' }} className="dark:bg-gray-900">
+        <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh', paddingBottom: '80px' }} className="dark:bg-gray-900">
             {/* Header */}
             <div style={{ backgroundColor: '#dc2626', color: 'white', padding: '20px', textAlign: 'center' }}>
                 <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>🛡️ Feria Segura</h1>
                 <p style={{ margin: '4px 0 0', opacity: 0.9, fontSize: '14px' }}>Sindicato de Peñaflor</p>
             </div>
+            
+            {/* BIG LOGIN/REGISTER BUTTON - Only show if NOT logged in */}
+            {!isLoggedIn && (
+                <div style={{ padding: '16px', backgroundColor: '#fee2e2' }}>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button 
+                            onClick={() => navigate('/login')}
+                            style={{ 
+                                flex: 1,
+                                backgroundColor: '#dc2626',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '12px',
+                                padding: '16px',
+                                fontSize: '16px',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                            }}
+                        >
+                            <LogIn size={20} />
+                            Iniciar Sesión
+                        </button>
+                        <button 
+                            onClick={() => navigate('/registro')}
+                            style={{ 
+                                flex: 1,
+                                backgroundColor: 'white',
+                                color: '#dc2626',
+                                border: '2px solid #dc2626',
+                                borderRadius: '12px',
+                                padding: '16px',
+                                fontSize: '16px',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px'
+                            }}
+                        >
+                            <User size={20} />
+                            Registrarse
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* User info if logged in */}
+            {isLoggedIn && (
+                <div style={{ padding: '12px 16px', backgroundColor: '#dcfce7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#166534', fontWeight: 'bold' }}>✅ Hola, {userData?.nombre || 'Usuario'}</span>
+                    <button onClick={() => navigate('/profile')} style={{ color: '#166534', background: 'none', border: 'none', fontSize: '14px', cursor: 'pointer' }}>MiPerfil</button>
+                </div>
+            )}
             
             {/* Status & Greeting */}
             <div style={{ padding: '15px', textAlign: 'center' }} className="dark:bg-gray-800">
@@ -228,38 +292,6 @@ export default function Home() {
                         <span style={{ fontWeight: 'bold', color: '#dc2626' }}>133 PDI</span>
                     </div>
                 </div>
-            </div>
-            
-            {/* Login Button */}
-            <div style={{ 
-                position: 'fixed', 
-                bottom: 0, 
-                left: 0, 
-                right: 0, 
-                backgroundColor: 'white', 
-                borderTop: '1px solid #e5e7eb', 
-                padding: '16px',
-                textAlign: 'center'
-            }} className="dark:bg-gray-800 dark:border-gray-700">
-                <button 
-                    onClick={() => navigate('/login')} 
-                    style={{ 
-                        background: 'none', 
-                        border: 'none', 
-                        color: '#6b7280', 
-                        fontSize: '14px', 
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        width: '100%'
-                    }}
-                    className="dark:text-gray-300"
-                >
-                    <Clock size={16} />
-                    Ingresar / Registrarse para más funciones
-                </button>
             </div>
             
             <style>{`
