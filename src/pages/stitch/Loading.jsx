@@ -1,11 +1,11 @@
-import { useEffect, useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { MapPin, Navigation, RefreshCw, AlertTriangle, Plus, ZoomIn, ZoomOut, Crosshair, WifiOff, Settings } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
+import { MapPin, Navigation, RefreshCw, AlertTriangle, Plus, Loader, Crosshair, WifiOff, Settings } from 'lucide-react';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// Fix leaflet marker icon
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
@@ -13,152 +13,15 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-function MapControls({ zoom, setZoom }) {
-  const map = useMap();
-  
-  const handleZoomIn = () => {
-    map.zoomIn();
-    setZoom(map.getZoom());
-  };
-  
-  const handleZoomOut = () => {
-    map.zoomOut();
-    setZoom(map.getZoom());
-  };
-
-  return (
-    <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
-      <button
-        onClick={handleZoomIn}
-        className="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg shadow-lg flex items-center justify-center text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-      >
-        <ZoomIn size={20} />
-      </button>
-      <button
-        onClick={handleZoomOut}
-        className="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg shadow-lg flex items-center justify-center text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-      >
-        <ZoomOut size={20} />
-      </button>
-    </div>
-  );
-}
-
-function LocationMarker({ location, setLocation }) {
-  const map = useMap();
-  
-  useMapEvents({
-    click(e) {
-      setLocation({ ...location, lat: e.latlng.lat, lng: e.latlng.lng });
-    },
-  });
-
-  useEffect(() => {
-    if (location.lat && location.lng) {
-      map.setView([location.lat, location.lng], map.getZoom());
-    }
-  }, [location.lat, location.lng, map]);
-
-  return location.lat && location.lng ? (
-    <Marker position={[location.lat, location.lng]} />
-  ) : null;
-}
-
-// Componente para solicitar activar GPS
-function GPSRequestPrompt({ onRetry }) {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isAndroid = /Android/.test(navigator.userAgent);
-    
-    const openSettings = () => {
-        if (isIOS) {
-            window.location.href = 'App-Prefs:Privacy&path=LOCATION';
-        } else if (isAndroid) {
-            window.location.href = 'android.settings.LOCATION_SOURCE_SETTINGS';
-        } else {
-            window.location.reload();
-        }
-    };
-
-    return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-6">
-            <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-6">
-                <WifiOff className="w-12 h-12 text-red-600" />
-            </div>
-            
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white text-center mb-4">
-                📍 GPS Desactivado
-            </h2>
-            
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md shadow-lg mb-6">
-                <p className="text-lg text-gray-600 dark:text-gray-300 text-center mb-4">
-                    Para enviar una alerta necesitamos conocer tu ubicación.
-                </p>
-                
-                <div className="space-y-3 text-left">
-                    <div className="flex items-start gap-3">
-                        <span className="text-green-500 font-bold">1.</span>
-                        <p className="text-gray-700 dark:text-gray-300">
-                            Ve a <strong>Configuración</strong> de tu teléfono
-                        </p>
-                    </div>
-                    <div className="flex items-start gap-3">
-                        <span className="text-green-500 font-bold">2.</span>
-                        <p className="text-gray-700 dark:text-gray-300">
-                            Busca <strong>Ubicación</strong> o <strong>GPS</strong>
-                        </p>
-                    </div>
-                    <div className="flex items-start gap-3">
-                        <span className="text-green-500 font-bold">3.</span>
-                        <p className="text-gray-700 dark:text-gray-300">
-                            <strong>Actívalo</strong> y vuelve a esta app
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex flex-col gap-3 w-full max-w-md">
-                <button
-                    onClick={openSettings}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white text-lg font-bold py-4 rounded-xl shadow-lg flex items-center justify-center gap-2"
-                >
-                    <Settings size={24} />
-                    Abrir Configuración
-                </button>
-                
-                <button
-                    onClick={onRetry}
-                    className="w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white text-lg font-bold py-4 rounded-xl flex items-center justify-center gap-2"
-                >
-                    <RefreshCw size={24} />
-                    Reintentar
-                </button>
-            </div>
-            
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-6 text-center">
-                {isIOS ? '📱 iPhone: Configuración > Privacidad > Ubicación' : 
-                 isAndroid ? '📱 Android: Configuración > Ubicación' : 
-                 'Permite el acceso a ubicación cuando se solicite'}
-            </p>
-        </div>
-    );
-}
-
-function GPSLoadingScreen() {
-    return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-6">
-            <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mb-6"></div>
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
-                Obteniendo ubicación GPS...
-            </h2>
-            <p className="text-gray-500 dark:text-gray-400 text-center mb-4">
-                Por favor permita el acceso a su ubicación
-            </p>
-            <p className="text-sm text-green-600 dark:text-green-400">
-                📡 Usando GPS de alta precisión
-            </p>
-        </div>
-    );
-}
+const customIcon = L.icon({
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
 
 export default function LoadingPage() {
     const navigate = useNavigate();
@@ -167,16 +30,9 @@ export default function LoadingPage() {
     
     const [location, setLocation] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [isClient, setIsClient] = useState(false);
-    const [zoom, setZoom] = useState(16);
-    const [watchingPosition, setWatchingPosition] = useState(false);
     const [accuracyText, setAccuracyText] = useState('');
     const [gpsEnabled, setGpsEnabled] = useState(null);
     const watchIdRef = useRef(null);
-
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
 
     const startWatchingPosition = () => {
         if (!navigator.geolocation) {
@@ -185,8 +41,6 @@ export default function LoadingPage() {
         }
 
         if (watchIdRef.current !== null) return;
-
-        setWatchingPosition(true);
 
         const watchId = navigator.geolocation.watchPosition(
             (position) => {
@@ -199,24 +53,21 @@ export default function LoadingPage() {
                 setGpsEnabled(true);
 
                 const acc = position.coords.accuracy;
-                if (acc < 10) setAccuracyText('🟢 Excelente precisión GPS');
-                else if (acc < 25) setAccuracyText('🟡 Buena precisión');
-                else if (acc < 50) setAccuracyText('🟠 Precisión moderada');
-                else setAccuracyText('🔴 Precisión baja');
+                if (acc < 10) setAccuracyText('🟢 Excelente (±' + Math.round(acc) + 'm)');
+                else if (acc < 25) setAccuracyText('🟡 Buena (±' + Math.round(acc) + 'm)');
+                else if (acc < 50) setAccuracyText('🟠 Moderada (±' + Math.round(acc) + 'm)');
+                else setAccuracyText('🔴 Baja (±' + Math.round(acc) + 'm)');
             },
-            (error) => {
-                if (error.code === error.PERMISSION_DENIED) setGpsEnabled(false);
-                setAccuracyText('⚠️ GPS no disponible');
+            (err) => {
+                if (err.code === err.PERMISSION_DENIED) setGpsEnabled(false);
             },
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0, distanceFilter: 1 }
+            { enableHighAccuracy: true, timeout: 20000, maximumAge: 0, distanceFilter: 5 }
         );
 
         watchIdRef.current = watchId;
     };
 
     useEffect(() => {
-        if (!isClient) return;
-        
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -229,15 +80,16 @@ export default function LoadingPage() {
                     setGpsEnabled(true);
                     startWatchingPosition();
                 },
-                (error) => {
-                    if (error.code === error.PERMISSION_DENIED || error.code === error.POSITION_UNAVAILABLE) {
+                (err) => {
+                    if (err.code === err.PERMISSION_DENIED || err.code === err.POSITION_UNAVAILABLE) {
                         setGpsEnabled(false);
                     } else {
                         setLocation({ lat: -33.4489, lng: -70.6693, accuracy: 0 });
+                        setGpsEnabled(true);
                     }
                     setLoading(false);
                 },
-                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
             );
         } else {
             setGpsEnabled(false);
@@ -247,10 +99,9 @@ export default function LoadingPage() {
         return () => {
             if (watchIdRef.current !== null) {
                 navigator.geolocation.clearWatch(watchIdRef.current);
-                watchIdRef.current = null;
             }
         };
-    }, [isClient]);
+    }, []);
 
     const handleConfirmLocation = () => {
         if (location) {
@@ -278,11 +129,11 @@ export default function LoadingPage() {
                 setGpsEnabled(true);
                 startWatchingPosition();
             },
-            (error) => {
-                if (error.code === error.PERMISSION_DENIED) setGpsEnabled(false);
+            (err) => {
+                if (err.code === err.PERMISSION_DENIED) setGpsEnabled(false);
                 setLoading(false);
             },
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+            { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
         );
     };
 
@@ -295,76 +146,95 @@ export default function LoadingPage() {
         startWatchingPosition();
     };
 
+    // GPS Desactivado
     if (gpsEnabled === false) {
-        return <GPSRequestPrompt onRetry={handleRetry} />;
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isAndroid = /Android/.test(navigator.userAgent);
+        
+        const openSettings = () => {
+            if (isIOS) window.location.href = 'App-Prefs:Privacy&path=LOCATION';
+            else if (isAndroid) window.location.href = 'android.settings.LOCATION_SOURCE_SETTINGS';
+            else window.location.reload();
+        };
+
+        return (
+            <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
+                <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-6">
+                    <WifiOff className="w-12 h-12 text-red-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800 text-center mb-4">📍 GPS Desactivado</h2>
+                <div className="bg-white rounded-2xl p-6 max-w-md shadow-lg mb-6">
+                    <p className="text-lg text-gray-600 text-center mb-4">Necesitamos tu ubicación para enviar alertas.</p>
+                    <div className="space-y-2 text-left">
+                        <p>1. Ve a <strong>Configuración</strong></p>
+                        <p>2. Busca <strong>Ubicación</strong></p>
+                        <p>3. <strong>Actívalo</strong></p>
+                    </div>
+                </div>
+                <div className="flex flex-col gap-3 w-full max-w-md">
+                    <button onClick={openSettings} className="w-full bg-red-600 hover:bg-red-700 text-white text-lg font-bold py-4 rounded-xl">Abrir Configuración</button>
+                    <button onClick={handleRetry} className="w-full bg-gray-200 text-gray-800 text-lg font-bold py-4 rounded-xl">Reintentar</button>
+                </div>
+            </div>
+        );
     }
 
-    if (loading || !isClient) {
-        return <GPSLoadingScreen />;
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
+                <Loader className="w-16 h-16 animate-spin text-green-600 mb-6" />
+                <h2 className="text-2xl font-bold text-gray-800">Obteniendo GPS...</h2>
+                <p className="text-gray-500">Permite el acceso a tu ubicación</p>
+            </div>
+        );
     }
 
     const typeLabel = type === 'insecurity' ? 'Inseguridad' : 'Emergencia Médica';
     const typeColor = type === 'insecurity' ? 'red' : 'blue';
     const TypeIcon = type === 'insecurity' ? AlertTriangle : Plus;
+    const mapCenter = location ? [location.lat, location.lng] : [-33.4489, -70.6693];
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-            <header className="bg-white dark:bg-gray-800 p-4 shadow-sm z-10 relative">
+        <div className="min-h-screen bg-gray-50 flex flex-col" style={{ height: '100vh' }}>
+            <header className="bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full bg-${typeColor}-100 dark:bg-${typeColor}-900/30`}>
+                    <div className={`p-2 rounded-full bg-${typeColor}-100`}>
                         <TypeIcon className={`w-5 h-5 text-${typeColor}-600`} />
                     </div>
                     <div>
-                        <h1 className="text-lg font-bold text-gray-800 dark:text-white">
-                            Confirmar Ubicación
-                        </h1>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{typeLabel}</p>
+                        <h1 className="text-lg font-bold text-gray-800">Confirmar Ubicación</h1>
+                        <p className="text-sm text-gray-500">{typeLabel}</p>
                     </div>
                 </div>
             </header>
 
-            <div className="bg-green-50 dark:bg-green-900/30 p-3 mx-4 mt-3 rounded-xl border border-green-200 dark:border-green-800">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <Navigation className="w-5 h-5 text-green-600" />
-                        <span className="text-sm font-medium text-green-800 dark:text-green-300">GPS Activado</span>
-                    </div>
-                    {watchingPosition && <span className="text-xs text-green-600 animate-pulse">● Monitoreando</span>}
+            <div className="bg-green-50 p-3 mx-4 mt-3 rounded-xl border border-green-200">
+                <div className="flex items-center gap-2">
+                    <Navigation className="w-5 h-5 text-green-600" />
+                    <span className="text-sm font-medium text-green-800">GPS Activo</span>
+                    {accuracyText && <span className="text-xs text-green-700 ml-2">{accuracyText}</span>}
                 </div>
-                {accuracyText && <p className="text-xs mt-1 ml-7 text-green-700 dark:text-green-400">{accuracyText}</p>}
             </div>
 
-            {location?.accuracy && (
-                <div className="mx-4 mt-2 flex items-center gap-2">
-                    <Crosshair className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Precisión: ±{Math.round(location.accuracy)}m</span>
+            {location && (
+                <div className="bg-blue-50 p-3 mx-4 mt-2 rounded-xl border border-blue-200">
+                    <p className="text-sm text-blue-800 font-mono">📍 {location.lat.toFixed(6)}, {location.lng.toFixed(6)}</p>
                 </div>
             )}
 
-            <div className="flex-1 relative mt-2 mx-2 rounded-2xl overflow-hidden shadow-xl">
-                {isClient && location && (
-                    <MapContainer center={[location.lat, location.lng]} zoom={zoom} style={{ height: '100%', width: '100%' }}>
-                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                        <LocationMarker location={location} setLocation={setLocation} />
-                        <MapControls zoom={zoom} setZoom={setZoom} />
-                    </MapContainer>
-                )}
+            <div className="flex-1 mx-2 mt-2 rounded-xl overflow-hidden shadow-lg" style={{ minHeight: '300px' }}>
+                <MapContainer center={mapCenter} zoom={16} style={{ height: '100%', width: '100%' }}>
+                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                    {location && <Marker position={[location.lat, location.lng]} icon={customIcon} />}
+                </MapContainer>
             </div>
 
-            <div className="p-4 pb-24 bg-white dark:bg-gray-800">
-                <div className="flex items-center gap-2 mb-3 text-sm text-gray-600 dark:text-gray-400">
-                    <MapPin size={16} />
-                    <span>Toque el mapa para ajustar si es necesario</span>
-                </div>
-
-                <button onClick={handleRefreshGPS} className="w-full flex items-center justify-center gap-2 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 py-3 rounded-xl font-medium mb-3">
-                    <RefreshCw size={20} />
-                    Actualizar GPS
+            <div className="p-4 pb-24 bg-white">
+                <button onClick={handleRefreshGPS} className="w-full flex items-center justify-center gap-2 bg-blue-100 text-blue-700 py-3 rounded-xl font-medium mb-3">
+                    <RefreshCw size={20} />Actualizar GPS
                 </button>
-
-                <button onClick={handleConfirmLocation} disabled={!location} className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white text-xl font-bold py-4 rounded-xl shadow-lg flex items-center justify-center gap-2">
-                    <MapPin size={24} />
-                    Confirmar Ubicación
+                <button onClick={handleConfirmLocation} disabled={!location} className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white text-xl font-bold py-4 rounded-xl flex items-center justify-center gap-2">
+                    <MapPin size={24} />Confirmar
                 </button>
             </div>
         </div>
