@@ -22,7 +22,7 @@ import AdminSettings from './pages/admin/Settings';
 import AdminMap from './pages/admin/Map';
 import AdminNotifications from './pages/admin/Notifications';
 
-// Layout with Bottom Nav - NO SPINNER, show content immediately
+// Layout with Bottom Nav
 function AppLayout({ children }) {
     const { user } = useAuth();
     return (
@@ -33,35 +33,20 @@ function AppLayout({ children }) {
     );
 }
 
-// Protected Route - checks user status (ACTIVO required)
+// Protected Route - allow navigation, just check auth
 function ProtectedRoute({ children, requireAdmin = false }) {
-    const { user, userData, loading } = useAuth();
+    const { user, userData } = useAuth();
     
-    // While loading, allow access to home but protect other routes
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-            </div>
-        );
+    // Allow access if user exists and is approved
+    if (user && userData?.estado === 'ACTIVO') {
+        if (requireAdmin && userData?.role !== 'admin') {
+            return <Navigate to="/" replace />;
+        }
+        return children;
     }
     
-    // No user -> registro
-    if (!user) {
-        return <Navigate to="/registro" replace />;
-    }
-    
-    // User not approved -> registro
-    if (userData?.estado !== 'ACTIVO') {
-        return <Navigate to="/registro" replace />;
-    }
-    
-    // Admin check
-    if (requireAdmin && userData?.role !== 'admin') {
-        return <Navigate to="/" replace />;
-    }
-    
-    return children;
+    // Not logged in or not approved -> registration
+    return <Navigate to="/registro" replace />;
 }
 
 export default function App() {
@@ -70,7 +55,7 @@ export default function App() {
             <Router>
                 <AppLayout>
                     <Routes>
-                        {/* Public Routes - always accessible */}
+                        {/* Public Routes */}
                         <Route path="/" element={<Home />} />
                         <Route path="/login" element={<Login />} />
                         <Route path="/registro" element={<RegistrationFlow />} />
@@ -78,68 +63,20 @@ export default function App() {
                         <Route path="/confirmation" element={<Confirmation />} />
                         
                         {/* Protected Routes */}
-                        <Route path="/history" element={
-                            <ProtectedRoute>
-                                <History />
-                            </ProtectedRoute>
-                        } />
-                        <Route path="/news" element={
-                            <ProtectedRoute>
-                                <News />
-                            </ProtectedRoute>
-                        } />
-                        <Route path="/chat" element={
-                            <ProtectedRoute>
-                                <Chat />
-                            </ProtectedRoute>
-                        } />
-                        <Route path="/encuestas" element={
-                            <ProtectedRoute>
-                                <Encuestas />
-                            </ProtectedRoute>
-                        } />
-                        <Route path="/profile" element={
-                            <ProtectedRoute>
-                                <Profile />
-                            </ProtectedRoute>
-                        } />
+                        <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
+                        <Route path="/news" element={<ProtectedRoute><News /></ProtectedRoute>} />
+                        <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+                        <Route path="/encuestas" element={<ProtectedRoute><Encuestas /></ProtectedRoute>} />
+                        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                         
                         {/* Admin Routes */}
-                        <Route path="/admin" element={
-                            <ProtectedRoute requireAdmin>
-                                <AdminDashboard />
-                            </ProtectedRoute>
-                        } />
-                        <Route path="/admin/alerts" element={
-                            <ProtectedRoute requireAdmin>
-                                <AdminAlerts />
-                            </ProtectedRoute>
-                        } />
-                        <Route path="/admin/users" element={
-                            <ProtectedRoute requireAdmin>
-                                <AdminUsers />
-                            </ProtectedRoute>
-                        } />
-                        <Route path="/users" element={
-                            <ProtectedRoute requireAdmin>
-                                <AdminUsers />
-                            </ProtectedRoute>
-                        } />
-                        <Route path="/admin/notifications" element={
-                            <ProtectedRoute requireAdmin>
-                                <AdminNotifications />
-                            </ProtectedRoute>
-                        } />
-                        <Route path="/admin/settings" element={
-                            <ProtectedRoute requireAdmin>
-                                <AdminSettings />
-                            </ProtectedRoute>
-                        } />
-                        <Route path="/admin/map" element={
-                            <ProtectedRoute requireAdmin>
-                                <AdminMap />
-                            </ProtectedRoute>
-                        } />
+                        <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
+                        <Route path="/admin/alerts" element={<ProtectedRoute requireAdmin><AdminAlerts /></ProtectedRoute>} />
+                        <Route path="/admin/users" element={<ProtectedRoute requireAdmin><AdminUsers /></ProtectedRoute>} />
+                        <Route path="/users" element={<ProtectedRoute requireAdmin><AdminUsers /></ProtectedRoute>} />
+                        <Route path="/admin/notifications" element={<ProtectedRoute requireAdmin><AdminNotifications /></ProtectedRoute>} />
+                        <Route path="/admin/settings" element={<ProtectedRoute requireAdmin><AdminSettings /></ProtectedRoute>} />
+                        <Route path="/admin/map" element={<ProtectedRoute requireAdmin><AdminMap /></ProtectedRoute>} />
                         
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>

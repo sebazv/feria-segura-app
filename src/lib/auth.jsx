@@ -1,21 +1,16 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from './supabase/client';
 
-// ========== AUTH FUNCTIONS ==========
-
+// Auth functions
 export const registerFeriante = async ({ email, telefono, puestoNumero, password }) => {
     try {
         const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                data: { telefono, puesto_numero: puestoNumero }
-            }
+            email, password,
+            options: { data: { telefono, puesto_numero: puestoNumero } }
         });
         if (error) throw error;
         return { success: true, user: data.user };
     } catch (error) {
-        console.error('Error en registro:', error);
         return { success: false, error: error.message };
     }
 };
@@ -29,7 +24,6 @@ export const loginFeriante = async (email, password) => {
         }
         return { success: true, user: data.user };
     } catch (error) {
-        console.error('Error en login:', error);
         return { success: false, error: error.message };
     }
 };
@@ -60,32 +54,26 @@ export const validarTelefono = (telefono) => {
     return /^(\+?56|0)?9[0-9]{8}$/.test(limpia);
 };
 
-// ========== AUTH CONTEXT ==========
-
+// Auth Context
 const AuthContext = createContext(null);
-
 export const useAuth = () => useContext(AuthContext) || { user: null, userData: null, loading: false };
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [userData, setUserData] = useState(null);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Skip auth check on first load - show home immediately
         const initAuth = async () => {
-            setLoading(true);
             try {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session?.user) {
                     setUser(session.user);
                     const result = await getUsuarioDatos(session.user.id);
-                    if (result.success) {
-                        setUserData(result.datos);
-                    }
+                    if (result.success) setUserData(result.datos);
                 }
             } catch (e) {
-                console.log('Auth init error (ignored):', e.message);
+                // Ignore errors
             }
             setLoading(false);
         };
@@ -96,9 +84,7 @@ export const AuthProvider = ({ children }) => {
             if (session?.user) {
                 setUser(session.user);
                 const result = await getUsuarioDatos(session.user.id);
-                if (result.success) {
-                    setUserData(result.datos);
-                }
+                if (result.success) setUserData(result.datos);
             } else {
                 setUser(null);
                 setUserData(null);
