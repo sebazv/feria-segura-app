@@ -30,7 +30,7 @@ export default function LoadingPage() {
     const [loading, setLoading] = useState(true);
     const [accuracyText, setAccuracyText] = useState('');
     const [gpsDenied, setGpsDenied] = useState(false);
-    const [gpsStatus, setGpsStatus] = useState('Obteniendo GPS...'); // Status message
+    const [gpsStatus, setGpsStatus] = useState('Obteniendo GPS...');
     const watchIdRef = useRef(null);
 
     const startWatchingPosition = () => {
@@ -44,12 +44,11 @@ export default function LoadingPage() {
 
         const watchId = navigator.geolocation.watchPosition(
             (position) => {
-                const newLoc = {
+                setLocation({
                     lat: position.coords.latitude,
                     lng: position.coords.longitude,
                     accuracy: position.coords.accuracy
-                };
-                setLocation(newLoc);
+                });
                 setLoading(false);
                 setGpsStatus('GPS conectado');
 
@@ -60,7 +59,6 @@ export default function LoadingPage() {
                 else setAccuracyText('🔴 Precisión baja');
             },
             (err) => {
-                // Only set denied if it's a permission error
                 if (err.code === err.PERMISSION_DENIED) {
                     setGpsDenied(true);
                 }
@@ -73,7 +71,6 @@ export default function LoadingPage() {
 
     useEffect(() => {
         if (navigator.geolocation) {
-            // First try - give it time to get GPS
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     setLocation({
@@ -86,17 +83,14 @@ export default function LoadingPage() {
                     startWatchingPosition();
                 },
                 (err) => {
-                    // Permission denied - show error
                     if (err.code === err.PERMISSION_DENIED) {
                         setGpsDenied(true);
                         setGpsStatus('Permiso denegado');
                     } else if (err.code === err.POSITION_UNAVAILABLE) {
                         setGpsStatus('GPS no disponible, usando ubicación por defecto');
-                        // Use default location but allow continue
                         setLocation({ lat: -33.4489, lng: -70.6693, accuracy: 0 });
                         setLoading(false);
                     } else {
-                        // Timeout - wait for watchPosition
                         setGpsStatus('Buscando señales GPS...');
                         startWatchingPosition();
                     }
@@ -142,9 +136,7 @@ export default function LoadingPage() {
                 startWatchingPosition();
             },
             (err) => {
-                if (err.code === err.PERMISSION_DENIED) {
-                    setGpsDenied(true);
-                }
+                if (err.code === err.PERMISSION_DENIED) setGpsDenied(true);
                 setLoading(false);
             },
             { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
@@ -162,42 +154,35 @@ export default function LoadingPage() {
         
         startWatchingPosition();
         
-        // Force loading to false after 5 seconds even if no response
         setTimeout(() => {
             if (location) setLoading(false);
         }, 5000);
     };
 
-    // GPS explícitamente denegado
     if (gpsDenied) {
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        
         return (
-            <div className="min-h-screen bg-red-50 flex flex-col">
-                <header className="bg-red-600 p-4">
-                    <h1 className="text-xl font-bold text-white text-center">📍 Confirmar Ubicación</h1>
-                </header>
+            <div className="min-h-screen bg-gray-100 flex flex-col">
+                <div style={{ backgroundColor: '#dc2626', padding: '20px' }}>
+                    <h1 style={{ color: 'white', fontSize: '24px', fontWeight: 'bold', textAlign: 'center' }}>📍 Confirmar Ubicación</h1>
+                </div>
                 
                 <div className="flex-1 flex flex-col items-center justify-center p-6">
-                    <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-6">
-                        <WifiOff className="w-12 h-12 text-red-600" />
+                    <div style={{ width: '100px', height: '100px', backgroundColor: '#fee2e2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+                        <span style={{ fontSize: '48px' }}>📍</span>
                     </div>
                     
-                    <h2 className="text-2xl font-bold text-gray-800 text-center mb-4">GPS Desactivado</h2>
+                    <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1f2937', textAlign: 'center', marginBottom: '16px' }}>GPS Desactivado</h2>
                     
-                    <div className="bg-white rounded-2xl p-6 shadow-lg mb-6 text-center">
-                        <p className="text-lg text-gray-600 mb-4">Activa el GPS para continuar</p>
-                        <p className="text-sm text-gray-500">
-                            {isIOS ? 'iPhone: Configuración > Privacidad > Ubicación' : 'Android: Configuración > Ubicación'}
-                        </p>
+                    <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '24px', marginBottom: '24px', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+                        <p style={{ fontSize: '18px', color: '#4b5563', marginBottom: '12px' }}>Activa el GPS para continuar</p>
+                        <p style={{ fontSize: '14px', color: '#6b7280' }}>Configuración → Ubicación</p>
                     </div>
 
-                    <button onClick={handleRetry} className="w-full bg-red-600 text-white text-lg font-bold py-4 rounded-xl mb-3">
+                    <button onClick={handleRetry} style={{ width: '100%', backgroundColor: '#dc2626', color: 'white', fontSize: '18px', fontWeight: 'bold', padding: '16px', borderRadius: '12px', border: 'none', marginBottom: '12px' }}>
                         🔄 Reintentar
                     </button>
                     
-                    {/* Botón para continuar sin GPS */}
-                    <button onClick={handleConfirmLocation} className="w-full bg-gray-200 text-gray-800 text-lg font-bold py-3 rounded-xl">
+                    <button onClick={handleConfirmLocation} style={{ width: '100%', backgroundColor: '#9ca3af', color: 'white', fontSize: '18px', fontWeight: 'bold', padding: '16px', borderRadius: '12px', border: 'none' }}>
                         ⚠️ Continuar sin GPS
                     </button>
                 </div>
@@ -205,65 +190,58 @@ export default function LoadingPage() {
         );
     }
 
-    // Cargando - mostrar spinner con status
     if (loading) {
         return (
-            <div className="min-h-screen bg-red-50 flex flex-col">
-                <header className="bg-red-600 p-4">
-                    <h1 className="text-xl font-bold text-white text-center">📍 Confirmar Ubicación</h1>
-                </header>
+            <div className="min-h-screen bg-gray-100 flex flex-col">
+                <div style={{ backgroundColor: '#dc2626', padding: '20px' }}>
+                    <h1 style={{ color: 'white', fontSize: '24px', fontWeight: 'bold', textAlign: 'center' }}>📍 Confirmar Ubicación</h1>
+                </div>
                 
                 <div className="flex-1 flex flex-col items-center justify-center p-6">
-                    <Loader className="w-16 h-16 animate-spin text-red-600 mb-6" />
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Obteniendo ubicación...</h2>
-                    <p className="text-gray-500 text-center">{gpsStatus}</p>
-                    <p className="text-sm text-gray-400 mt-4">Por favor espera un momento</p>
+                    <div style={{ width: '64px', height: '64px', border: '4px solid #dc2626', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '20px' }}></div>
+                    <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px' }}>Obteniendo ubicación...</h2>
+                    <p style={{ color: '#6b7280', textAlign: 'center' }}>{gpsStatus}</p>
                 </div>
+                
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
         );
     }
 
     const typeLabel = type === 'insecurity' ? 'Inseguridad' : 'Emergencia Médica';
-    const typeColor = type === 'insecurity' ? 'red' : 'blue';
-    const TypeIcon = type === 'insecurity' ? AlertTriangle : Plus;
+    const headerColor = type === 'insecurity' ? '#dc2626' : '#2563eb';
     const mapCenter = location ? [location.lat, location.lng] : [-33.4489, -70.6693];
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col" style={{ height: '100vh' }}>
-            <header className={`bg-${typeColor}-600 p-4`}>
-                <h1 className="text-xl font-bold text-white text-center">📍 {typeLabel}</h1>
-            </header>
-
-            {/* GPS Status */}
-            <div className="bg-green-50 p-3 mx-4 mt-3 rounded-xl border border-green-200">
-                <div className="flex items-center gap-2">
-                    <Navigation className="w-5 h-5 text-green-600" />
-                    <span className="text-sm font-medium text-green-800">{gpsStatus}</span>
-                </div>
-                {accuracyText && <p className="text-xs text-green-700 mt-1 ml-7">{accuracyText}</p>}
+        <div className="min-h-screen bg-gray-100 flex flex-col" style={{ height: '100vh' }}>
+            <div style={{ backgroundColor: headerColor, padding: '16px' }}>
+                <h1 style={{ color: 'white', fontSize: '22px', fontWeight: 'bold', textAlign: 'center' }}>📍 {typeLabel}</h1>
             </div>
 
-            {/* Coordenadas */}
+            <div style={{ backgroundColor: '#dcfce7', padding: '12px', margin: '12px', borderRadius: '12px', border: '1px solid #86efac' }}>
+                <span style={{ fontSize: '14px', color: '#166534', fontWeight: '500' }}>✅ {gpsStatus}</span>
+                {accuracyText && <p style={{ fontSize: '12px', color: '#15803d', marginTop: '4px' }}>{accuracyText}</p>}
+            </div>
+
             {location && (
-                <div className="bg-blue-50 p-3 mx-4 mt-2 rounded-xl border border-blue-200">
-                    <p className="text-sm text-blue-800 font-mono">📍 {location.lat.toFixed(6)}, {location.lng.toFixed(6)}</p>
+                <div style={{ backgroundColor: '#dbeafe', padding: '12px', margin: '12px', borderRadius: '12px', border: '1px solid #93c5fd' }}>
+                    <p style={{ fontSize: '14px', color: '#1e40af', fontFamily: 'monospace' }}>📍 {location.lat.toFixed(6)}, {location.lng.toFixed(6)}</p>
                 </div>
             )}
 
-            {/* Mapa */}
-            <div className="flex-1 mx-2 mt-2 rounded-xl overflow-hidden shadow-lg" style={{ minHeight: '300px' }}>
+            <div style={{ flex: 1, margin: '8px', borderRadius: '12px', overflow: 'hidden', minHeight: '300px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
                 <MapContainer center={mapCenter} zoom={16} style={{ height: '100%', width: '100%' }}>
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                     {location && <Marker position={[location.lat, location.lng]} icon={customIcon} />}
                 </MapContainer>
             </div>
 
-            <div className="p-4 pb-24 bg-white">
-                <button onClick={handleRefreshGPS} className="w-full flex items-center justify-center gap-2 bg-blue-100 text-blue-700 py-3 rounded-xl font-medium mb-3">
-                    <RefreshCw size={20} />Actualizar GPS
+            <div style={{ padding: '16px', backgroundColor: 'white', paddingBottom: '100px' }}>
+                <button onClick={handleRefreshGPS} style={{ width: '100%', backgroundColor: '#3b82f6', color: 'white', fontSize: '16px', fontWeight: '600', padding: '14px', borderRadius: '12px', border: 'none', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    🔄 Actualizar GPS
                 </button>
-                <button onClick={handleConfirmLocation} className="w-full bg-green-600 hover:bg-green-700 text-white text-xl font-bold py-4 rounded-xl flex items-center justify-center gap-2">
-                    <MapPin size={24} />Confirmar Ubicación
+                <button onClick={handleConfirmLocation} style={{ width: '100%', backgroundColor: '#16a34a', color: 'white', fontSize: '20px', fontWeight: 'bold', padding: '18px', borderRadius: '12px', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+                    ✅ Confirmar Ubicación
                 </button>
             </div>
         </div>
