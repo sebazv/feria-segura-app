@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Check, Search, Loader, Trash2, AlertTriangle, X } from 'lucide-react';
+import { Users, Check, Search, Loader, Trash2, AlertTriangle, Crown, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase/client';
 
 export default function AdminUsers() {
@@ -8,6 +8,7 @@ export default function AdminUsers() {
     const [search, setSearch] = useState('');
     const [filtroEstado, setFiltroEstado] = useState('todos');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+    const [showPromoteConfirm, setShowPromoteConfirm] = useState(null);
 
     useEffect(() => {
         loadUsuarios();
@@ -36,15 +37,25 @@ export default function AdminUsers() {
         );
     };
 
+    const hacerAdmin = async (userId) => {
+        await supabase
+            .from('usuarios')
+            .update({ role: 'admin' })
+            .eq('id', userId);
+        
+        setUsuarios(prev => 
+            prev.map(u => u.id === userId ? { ...u, role: 'admin' } : u)
+        );
+        setShowPromoteConfirm(null);
+    };
+
     const eliminarUsuario = async (userId) => {
         try {
-            // Just mark as eliminated in the usuarios table
             await supabase
                 .from('usuarios')
                 .update({ estado: 'ELIMINADO' })
                 .eq('id', userId);
             
-            // Remove from local list
             setUsuarios(prev => prev.filter(u => u.id !== userId));
             setShowDeleteConfirm(null);
         } catch (err) {
@@ -55,17 +66,19 @@ export default function AdminUsers() {
 
     const getEstadoBadge = (estado) => {
         switch (estado) {
-            case 'ACTIVO':
-                return <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">✓ Activo</span>;
-            case 'PENDIENTE':
-                return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold">⏳ Pendiente</span>;
-            case 'RECHAZADO':
-                return <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold">✗ Rechazado</span>;
-            case 'ELIMINADO':
-                return <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-bold">Eliminado</span>;
-            default:
-                return <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">{estado}</span>;
+            case 'ACTIVO': return <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">✓ Activo</span>;
+            case 'PENDIENTE': return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold">⏳ Pendiente</span>;
+            case 'RECHAZADO': return <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold">✗ Rechazado</span>;
+            case 'ELIMINADO': return <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-bold">Eliminado</span>;
+            default: return <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">{estado}</span>;
         }
+    };
+
+    const getRoleBadge = (role) => {
+        if (role === 'admin') {
+            return <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold">👑 Admin</span>;
+        }
+        return <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">Feriante</span>;
     };
 
     const usuariosFiltrados = usuarios.filter(u => {
@@ -94,7 +107,7 @@ export default function AdminUsers() {
             <header className="mb-4">
                 <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
                     <Users size={24} />
-                    Usuarios
+                    Gestionar Usuarios
                     {pendientes > 0 && (
                         <span className="bg-yellow-500 text-white text-sm px-2 py-1 rounded-full">
                             {pendientes} pendientes
@@ -141,6 +154,34 @@ export default function AdminUsers() {
                 ) : (
                     usuariosFiltrados.map((usuario) => (
                         <div key={usuario.id} className="bg-white rounded-xl p-4 shadow-md">
+                            {/* Confirmación de hacer admin */}
+                            {showPromoteConfirm === usuario.id && (
+                                <div className="mb-4 p-4 bg-purple-50 rounded-xl border-2 border-purple-300">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <Crown className="text-purple-600" size={20} />
+                                        <p className="font-bold text-purple-800">¿Hacer Administrador?</p>
+                                    </div>
+                                    <p className="text-sm text-purple-700 mb-3">
+                                        {usuario.nombre} podrá gestionar usuarios y ver alertas.
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => hacerAdmin(usuario.id)}
+                                            className="flex-1 bg-purple-600 text-white py-2 rounded-lg font-bold"
+                                        >
+                                            Sí, hacer Admin
+                                        </button>
+                                        <button
+                                            onClick={() => setShowPromoteConfirm(null)}
+                                            className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-medium"
+                                        >
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Confirmación de eliminación */}
                             {showDeleteConfirm === usuario.id && (
                                 <div className="mb-4 p-4 bg-red-50 rounded-xl border-2 border-red-300">
                                     <div className="flex items-center gap-2 mb-3">
@@ -174,6 +215,7 @@ export default function AdminUsers() {
                                             {usuario.nombre || 'Sin nombre'}
                                         </h3>
                                         {getEstadoBadge(usuario.estado)}
+                                        {getRoleBadge(usuario.role)}
                                     </div>
                                     <p className="text-gray-500 text-sm">📱 {usuario.telefono || 'Sin teléfono'}</p>
                                     <p className="text-gray-400 text-xs mt-1">
@@ -182,6 +224,18 @@ export default function AdminUsers() {
                                 </div>
                                 
                                 <div className="flex gap-2">
+                                    {/* Botón hacer admin */}
+                                    {usuario.role !== 'admin' && (
+                                        <button
+                                            onClick={() => setShowPromoteConfirm(usuario.id)}
+                                            className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-lg"
+                                            title="Hacer Administrador"
+                                        >
+                                            <Crown size={20} />
+                                        </button>
+                                    )}
+                                    
+                                    {/* Botón aprobar */}
                                     {usuario.estado === 'PENDIENTE' && (
                                         <button
                                             onClick={() => aprobarUsuario(usuario.id)}
@@ -191,6 +245,8 @@ export default function AdminUsers() {
                                             <Check size={20} />
                                         </button>
                                     )}
+                                    
+                                    {/* Botón eliminar */}
                                     <button
                                         onClick={() => setShowDeleteConfirm(usuario.id)}
                                         className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg"

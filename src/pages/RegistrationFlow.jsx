@@ -13,7 +13,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Phone, Check, Clock, AlertCircle, Loader, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase/client';
-import { useAuth } from '../../lib/auth';
+import { useAuth } from '../lib/auth.jsx';
 
 /**
  * Pantalla de espera - Versión mejorada con mensajes claros
