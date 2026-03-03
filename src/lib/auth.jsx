@@ -1,90 +1,49 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from './supabase/client';
 
-// Auth functions
-export const registerFeriante = async ({ email, telefono, puestoNumero, password }) => {
-    try {
-        const { data, error } = await supabase.auth.signUp({
-            email, password,
-            options: { data: { telefono, puesto_numero: puestoNumero } }
-        });
-        if (error) throw error;
-        return { success: true, user: data.user };
-    } catch (error) {
-        return { success: false, error: error.message };
-    }
-};
-
-export const loginFeriante = async (email, password) => {
-    try {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        if (data.user) {
-            await supabase.from('usuarios').update({ ultimo_acceso: new Date().toISOString() }).eq('id', data.user.id);
-        }
-        return { success: true, user: data.user };
-    } catch (error) {
-        return { success: false, error: error.message };
-    }
-};
-
-export const logoutFeriante = async () => {
-    try {
-        const { error } = await supabase.auth.signOut();
-        if (error) throw error;
-        return { success: true };
-    } catch (error) {
-        return { success: false, error: error.message };
-    }
-};
-
-export const getUsuarioDatos = async (uid) => {
-    try {
-        const { data, error } = await supabase.from('usuarios').select('*').eq('id', uid).single();
-        if (error) throw error;
-        return { success: true, datos: data };
-    } catch (error) {
-        return { success: false, error: error.message };
-    }
-};
-
-export const validarEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-export const validarTelefono = (telefono) => {
-    const limpia = telefono.replace(/\s/g, '');
-    return /^(\+?56|0)?9[0-9]{8}$/.test(limpia);
-};
-
-// Auth Context
 const AuthContext = createContext(null);
-export const useAuth = () => useContext(AuthContext) || { user: null, userData: null, loading: false };
+
+export const useAuth = () => {
+    const context = useContext(AuthContext);
+    return context || { user: null, userData: null, loading: false };
+};
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [userData, setUserData] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
 
+    // Load user on mount
     useEffect(() => {
-        const initAuth = async () => {
+        const loadUser = async () => {
+            setLoading(true);
             try {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session?.user) {
                     setUser(session.user);
-                    const result = await getUsuarioDatos(session.user.id);
-                    if (result.success) setUserData(result.datos);
+                    const { data } = await supabase
+                        .from('usuarios')
+                        .select('*')
+                        .eq('id', session.user.id)
+                        .single();
+                    setUserData(data);
                 }
             } catch (e) {
-                // Ignore errors
+                console.log('Auth load error:', e);
             }
             setLoading(false);
         };
-
-        initAuth();
+        loadUser();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (session?.user) {
                 setUser(session.user);
-                const result = await getUsuarioDatos(session.user.id);
-                if (result.success) setUserData(result.datos);
+                const { data } = await supabase
+                    .from('usuarios')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .single();
+                setUserData(data);
             } else {
                 setUser(null);
                 setUserData(null);
@@ -94,8 +53,19 @@ export const AuthProvider = ({ children }) => {
         return () => subscription.unsubscribe();
     }, []);
 
+    const login = (userData) => {
+        setUser(user);
+        setUserData(userData);
+    };
+
+    const logout = async () => {
+        await supabase.auth.signOut();
+        setUser(null);
+        setUserData(null);
+    };
+
     return (
-        <AuthContext.Provider value={{ user, userData, loading, setUserData }}>
+        <AuthContext.Provider value={{ user, userData, loading, login, logout, setUserData }}>
             {children}
         </AuthContext.Provider>
     );

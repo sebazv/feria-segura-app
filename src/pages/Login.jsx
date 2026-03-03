@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Phone, ArrowRight, Loader } from 'lucide-react';
+import { ArrowRight, Loader } from 'lucide-react';
 import { supabase } from '../lib/supabase/client';
 
 export default function Login() {
@@ -21,24 +21,16 @@ export default function Login() {
         }
 
         try {
+            // Find user by phone first
             const telefonoLimpio = telefono.replace(/\s/g, '').replace(/^\+56/, '');
             
             const { data: usuarios } = await supabase
                 .from('usuarios')
                 .select('*')
-                .or(`telefono.eq.${telefonoLimpio},telefono.eq.+56${telefonoLimpio},telefono.eq.56${telefonoLimpio}`)
+                .or(`telefono.eq.${telefonoLimpio},telefono.eq.+56${telefonoLimpio}`)
                 .limit(1);
 
-            let usuario = usuarios?.[0];
-            
-            if (!usuario) {
-                const { data: parcial } = await supabase
-                    .from('usuarios')
-                    .select('*')
-                    .like('telefono', `%${telefonoLimpio.slice(-9)}%`)
-                    .limit(1);
-                usuario = parcial?.[0];
-            }
+            const usuario = usuarios?.[0];
 
             if (!usuario) {
                 setError('No encontramos ese número. Regístrate primero.');
@@ -52,8 +44,51 @@ export default function Login() {
                 return;
             }
 
-            // Login successful - reload the page to update auth state
-            window.location.href = '/';
+            // Generate a fake email for this phone number
+            const fakeEmail = `user_${telefonoLimpio}@feria-segura.app`;
+            
+            // Try to sign in - if it fails, try sign up
+            let authData;
+            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+                email: fakeEmail,
+                password: 'temp_password_' + telefonoLimpio
+            });
+
+            if (signInError) {
+                // User doesn't exist, create them
+                const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+                    email: fakeEmail,
+                    password: 'temp_password_' + telefonoLimpio,
+                    options: {
+                        data: {
+                            telefono: telefonoLimpio,
+                            nombre: usuario.nombre || 'Usuario'
+                        }
+                    }
+                });
+
+                if (signUpError) {
+                    // Try to sign in anyway
+                    const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
+                        email: fakeEmail,
+                        password: 'temp_password_' + telefonoLimpio
+                    });
+                    
+                    if (retryError) {
+                        setError('Error al iniciar sesión. Intenta de nuevo.');
+                        setLoading(false);
+                        return;
+                    }
+                    authData = retryData;
+                } else {
+                    authData = signUpData;
+                }
+            } else {
+                authData = signInData;
+            }
+
+            // Success - reload to update auth
+            window.location.reload();
 
         } catch (err) {
             console.error('Login error:', err);
