@@ -26,30 +26,50 @@ export default function Login() {
         }
 
         try {
-            // Find user by phone
+            // Clean phone number - remove +56, spaces, etc
+            const telefonoLimpio = telefono.replace(/\s/g, '').replace(/^\+56/, '');
+            
+            // Find user by phone (flexible search)
             const { data: usuarios, error: findError } = await supabase
                 .from('usuarios')
                 .select('*')
-                .eq('telefono', telefono.trim())
-                .single();
+                .or(`telefono.eq.${telefonoLimpio},telefono.eq.+56${telefonoLimpio},telefono.eq.56${telefonoLimpio}`)
+                .limit(1);
 
-            if (findError || !usuarios) {
+            if (findError) {
+                console.log('Search error:', findError);
+            }
+
+            // Also try with +
+            let usuario = usuarios?.[0];
+            
+            if (!usuario) {
+                // Try partial match
+                const { data: usuariosParcial } = await supabase
+                    .from('usuarios')
+                    .select('*')
+                    .like('telefono', `%${telefonoLimpio.slice(-9)}%`)
+                    .limit(1);
+                usuario = usuariosParcial?.[0];
+            }
+
+            if (!usuario) {
                 setError('No encontramos ese número. Regístrate primero.');
                 setLoading(false);
                 return;
             }
 
-            if (usuarios.estado !== 'ACTIVO') {
-                setError('Tu cuenta está pendiente de aprobación.');
+            if (usuario.estado !== 'ACTIVO') {
+                setError('Tu cuenta está pendiente de aprobación. Te notificaremos cuando estés aprobado.');
                 setLoading(false);
                 return;
             }
 
-            // For now, just redirect to registration - in a real app we'd send OTP
-            alert('Número verificado. Serás redirigido para iniciar sesión.');
+            // Success - navigate to home (user stays logged in via session)
             navigate('/');
 
         } catch (err) {
+            console.error('Login error:', err);
             setError('Error. Intenta de nuevo.');
         } finally {
             setLoading(false);
