@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { User, Settings, Shield, Clock, Bell, Moon, Sun, Trash2, AlertTriangle, Users } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { useStore } from '../../store';
+import { supabase } from '../../lib/supabase/client';
 
 export default function ProfilePage() {
     const navigate = useNavigate();
-    const { user, userData } = useAuth();
+    const { user, userData, logout } = useAuth();
     const { darkMode, toggleDarkMode } = useStore();
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -25,9 +26,27 @@ export default function ProfilePage() {
     const nivelInfo = getNivelInfo(nivel);
     const isAdmin = userData?.role === 'admin';
 
+    const handleDeleteAccount = async () => {
+        try {
+            // Mark user as eliminated
+            await supabase
+                .from('usuarios')
+                .update({ estado: 'ELIMINADO' })
+                .eq('id', user.id);
+            
+            // Clear local storage
+            logout();
+            
+            // Redirect to home
+            window.location.href = '/';
+        } catch (err) {
+            console.error('Error:', err);
+            alert('Error al eliminar cuenta');
+        }
+    };
+
     return (
         <div className="p-4 pb-24 bg-gray-50 dark:bg-gray-900 min-h-screen">
-            {/* Profile Header */}
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md mb-4">
                 <div className="flex items-center gap-4">
                     <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center">
@@ -49,17 +68,13 @@ export default function ProfilePage() {
                 </div>
             </div>
 
-            {/* Estado badge */}
             <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md mb-4">
                 <div className="flex items-center justify-between">
                     <span className="text-gray-600 dark:text-gray-300">Estado de cuenta</span>
-                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-bold">
-                        ✓ Activa
-                    </span>
+                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-bold">✓ Activa</span>
                 </div>
             </div>
 
-            {/* Stats */}
             <div className="grid grid-cols-3 gap-3 mb-4">
                 <div className="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-md text-center">
                     <p className="text-2xl font-bold text-gray-800 dark:text-white">{userData?.alertas_enviadas || 0}</p>
@@ -75,9 +90,7 @@ export default function ProfilePage() {
                 </div>
             </div>
 
-            {/* Menu */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden mb-4">
-                {/* Admin Panel Button */}
                 {isAdmin && (
                     <>
                         <button onClick={() => navigate('/users')} className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700">
@@ -105,7 +118,6 @@ export default function ProfilePage() {
                 </button>
             </div>
 
-            {/* Confirmación de eliminación */}
             {showDeleteConfirm && (
                 <div className="bg-red-50 dark:bg-red-900/30 rounded-xl p-4 shadow-md mb-4 border-2 border-red-300">
                     <div className="flex items-center gap-2 mb-3">
@@ -113,27 +125,13 @@ export default function ProfilePage() {
                         <p className="font-bold text-red-800 dark:text-red-400">¿Eliminar mi cuenta?</p>
                     </div>
                     <p className="text-sm text-red-700 dark:text-red-300 mb-3">
-                        Perderás acceso a la app y todos tus datos.
+                        Perderás acceso a la app.
                     </p>
                     <div className="flex gap-2">
-                        <button
-                            onClick={async () => {
-                                try {
-                                    const { supabase } = await import('../../lib/supabase/client');
-                                    await supabase.auth.admin.deleteUser(user.id);
-                                    window.location.href = '/';
-                                } catch (err) {
-                                    alert('Error al eliminar cuenta');
-                                }
-                            }}
-                            className="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold"
-                        >
+                        <button onClick={handleDeleteAccount} className="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold">
                             Sí, eliminar
                         </button>
-                        <button
-                            onClick={() => setShowDeleteConfirm(false)}
-                            className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-2 rounded-lg font-medium"
-                        >
+                        <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-2 rounded-lg font-medium">
                             Cancelar
                         </button>
                     </div>

@@ -1,10 +1,5 @@
-/**
- * AdminUsers.jsx
- * Panel de administración de usuarios con aprobar/eliminar
- */
-
 import { useState, useEffect } from 'react';
-import { Users, Check, Search, Loader, Trash2, AlertTriangle } from 'lucide-react';
+import { Users, Check, Search, Loader, Trash2, AlertTriangle, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase/client';
 
 export default function AdminUsers() {
@@ -36,17 +31,6 @@ export default function AdminUsers() {
             .update({ estado: 'ACTIVO' })
             .eq('id', userId);
         
-        // Enviar notificación
-        const usuario = usuarios.find(u => u.id === userId);
-        if (usuario) {
-            await supabase.from('notificaciones_admin').insert({
-                tipo: 'USUARIO_APROBADO',
-                titulo: '✅ Usuario aprobado',
-                mensaje: `${usuario.nombre} ha sido aprobado`,
-                usuario_id: userId
-            });
-        }
-        
         setUsuarios(prev => 
             prev.map(u => u.id === userId ? { ...u, estado: 'ACTIVO' } : u)
         );
@@ -54,15 +38,17 @@ export default function AdminUsers() {
 
     const eliminarUsuario = async (userId) => {
         try {
-            // 1. Eliminar de auth.users ( hace cascade a usuarios)
-            const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+            // Just mark as eliminated in the usuarios table
+            await supabase
+                .from('usuarios')
+                .update({ estado: 'ELIMINADO' })
+                .eq('id', userId);
             
-            if (authError) throw authError;
-            
+            // Remove from local list
             setUsuarios(prev => prev.filter(u => u.id !== userId));
             setShowDeleteConfirm(null);
         } catch (err) {
-            console.error('Error eliminando usuario:', err);
+            console.error('Error:', err);
             alert('Error al eliminar usuario');
         }
     };
@@ -75,6 +61,8 @@ export default function AdminUsers() {
                 return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold">⏳ Pendiente</span>;
             case 'RECHAZADO':
                 return <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold">✗ Rechazado</span>;
+            case 'ELIMINADO':
+                return <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-bold">Eliminado</span>;
             default:
                 return <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">{estado}</span>;
         }
@@ -88,7 +76,7 @@ export default function AdminUsers() {
         
         const matchesEstado = filtroEstado === 'todos' || u.estado === filtroEstado;
         
-        return matchesSearch && matchesEstado;
+        return matchesSearch && matchesEstado && u.estado !== 'ELIMINADO';
     });
 
     const pendientes = usuarios.filter(u => u.estado === 'PENDIENTE').length;
@@ -117,33 +105,29 @@ export default function AdminUsers() {
 
             {/* Filtros */}
             <div className="bg-white rounded-xl p-4 shadow-md mb-4">
-                <div className="flex flex-col gap-3">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                        <input
-                            type="text"
-                            placeholder="Buscar..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:outline-none"
-                        />
-                    </div>
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                    <input
+                        type="text"
+                        placeholder="Buscar..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:outline-none"
+                    />
+                </div>
                     
-                    <div className="flex gap-2 overflow-x-auto pb-1">
-                        {['todos', 'PENDIENTE', 'ACTIVO', 'RECHAZADO'].map(estado => (
-                            <button
-                                key={estado}
-                                onClick={() => setFiltroEstado(estado)}
-                                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${
-                                    filtroEstado === estado 
-                                        ? 'bg-red-600 text-white' 
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
-                            >
-                                {estado === 'todos' ? 'Todos' : estado}
-                            </button>
-                        ))}
-                    </div>
+                <div className="flex gap-2 overflow-x-auto pb-1 mt-3">
+                    {['todos', 'PENDIENTE', 'ACTIVO', 'RECHAZADO'].map(estado => (
+                        <button
+                            key={estado}
+                            onClick={() => setFiltroEstado(estado)}
+                            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${
+                                filtroEstado === estado ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                        >
+                            {estado === 'todos' ? 'Todos' : estado}
+                        </button>
+                    ))}
                 </div>
             </div>
 
@@ -156,11 +140,7 @@ export default function AdminUsers() {
                     </div>
                 ) : (
                     usuariosFiltrados.map((usuario) => (
-                        <div 
-                            key={usuario.id} 
-                            className="bg-white rounded-xl p-4 shadow-md"
-                        >
-                            {/* Confirmación de eliminación */}
+                        <div key={usuario.id} className="bg-white rounded-xl p-4 shadow-md">
                             {showDeleteConfirm === usuario.id && (
                                 <div className="mb-4 p-4 bg-red-50 rounded-xl border-2 border-red-300">
                                     <div className="flex items-center gap-2 mb-3">
@@ -168,7 +148,7 @@ export default function AdminUsers() {
                                         <p className="font-bold text-red-800">¿Confirmar eliminación?</p>
                                     </div>
                                     <p className="text-sm text-red-700 mb-3">
-                                        Esta acción no se puede deshacer. El usuario perderá acceso permanentemente.
+                                        Esta acción no se puede deshacer.
                                     </p>
                                     <div className="flex gap-2">
                                         <button
@@ -201,7 +181,6 @@ export default function AdminUsers() {
                                     </p>
                                 </div>
                                 
-                                {/* Botones de acción */}
                                 <div className="flex gap-2">
                                     {usuario.estado === 'PENDIENTE' && (
                                         <button
@@ -229,7 +208,7 @@ export default function AdminUsers() {
             {/* Stats */}
             <div className="mt-4 grid grid-cols-3 gap-3">
                 <div className="bg-white rounded-xl p-3 shadow-md text-center">
-                    <p className="text-2xl font-bold text-gray-800">{usuarios.length}</p>
+                    <p className="text-2xl font-bold text-gray-800">{usuarios.filter(u => u.estado !== 'ELIMINADO').length}</p>
                     <p className="text-xs text-gray-500">Total</p>
                 </div>
                 <div className="bg-yellow-100 rounded-xl p-3 shadow-md text-center">
