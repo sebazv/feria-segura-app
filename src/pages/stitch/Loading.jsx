@@ -168,19 +168,23 @@ export default function LoadingPage() {
         setSending(true);
 
         try {
+            console.log('Sending alert with userData:', userData);
+            console.log('Location:', location);
+            
             const { error } = await supabase.from('alertas').insert({
                 tipo: type,
                 lat: location.lat,
                 lng: location.lng,
                 accuracy: location.accuracy,
                 user_id: userData.id,
-                user_name: userData.nombre,
-                user_phone: userData.telefono,
-                puesto_numero: userData.puesto_numero,
+                user_name: userData.nombre || 'Usuario',
+                user_phone: userData.telefono || '000000000',
+                puesto_numero: userData.puesto_numero || '1',
                 status: 'active',
                 created_at: new Date().toISOString()
             });
 
+            console.log('Insert result:', error);
             if (error) throw error;
 
             await supabase
