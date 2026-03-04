@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { MapPin, Shield, Plus, Edit, Send, Home as HomeIcon, ZoomIn, ZoomOut, Navigation } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { sendAlert } from '../../lib/alerts';
+import { supabase } from '../../lib/supabase/client';
 import { useAuth } from '../../lib/auth';
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -14,239 +14,317 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-function MapControls({ zoom, setZoom }) {
-  const map = useMap();
-  
-  return (
-    <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
-      <button
-        onClick={() => { map.zoomIn(); setZoom(map.getZoom()); }}
-        className="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg shadow-lg flex items-center justify-center text-gray-700 dark:text-gray-300"
-      >
-        <ZoomIn size={20} />
-      </button>
-      <button
-        onClick={() => { map.zoomOut(); setZoom(map.getZoom()); }}
-        className="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg shadow-lg flex items-center justify-center text-gray-700 dark:text-gray-300"
-      >
-        <ZoomOut size={20} />
-      </button>
-    </div>
-  );
-}
+const customIcon = L.icon({
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
 
-export default function StitchConfirmation() {
+export default function ConfirmationPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { user, userData } = useAuth();
+    
     const type = searchParams.get('type');
-    const lat = parseFloat(searchParams.get('lat') || '0');
-    const lng = parseFloat(searchParams.get('lng') || '0');
+    const latParam = parseFloat(searchParams.get('lat') || '0');
+    const lngParam = parseFloat(searchParams.get('lng') || '0');
 
+    const [location, setLocation] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [gpsStatus, setGpsStatus] = useState('Verificando GPS...');
+    const [accuracyText, setAccuracyText] = useState('');
+    const [gpsDenied, setGpsDenied] = useState(false);
+    
     const [sending, setSending] = useState(false);
     const [sent, setSent] = useState(false);
     const [error, setError] = useState('');
-    const [address, setAddress] = useState('');
-    const [zoom, setZoom] = useState(16);
+    
+    const watchIdRef = useRef(null);
 
+    // Get GPS on mount
     useEffect(() => {
-        if (lat !== 0 && lng !== 0) {
-            setAddress(`Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`);
-        } else {
-            setAddress('Ubicación por defecto');
-        }
-    }, [lat, lng]);
+        const getLocation = () => {
+            if (!navigator.geolocation) {
+                setGpsDenied(true);
+                setGpsStatus('GPS no disponible');
+                setLocation({ lat: latParam || -33.4489, lng: lngParam || -70.6693, accuracy: 0 });
+                setLoading(false);
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const newLoc = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                        accuracy: position.coords.accuracy
+                    };
+                    setLocation(newLoc);
+                    setGpsStatus('GPS conectado');
+                    setLoading(false);
+                    
+                    const acc = position.coords.accuracy;
+                    if (acc < 10) setAccuracyText('🟢 Excelente precisión');
+                    else if (acc < 25) setAccuracyText('🟡 Buena precisión');
+                    else if (acc < 50) setAccuracyText('🟠 Precisión moderada');
+                    else setAccuracyText('🔴 Precisión baja');
+                    
+                    // Start watching for updates
+                    startWatching();
+                },
+                (err) => {
+                    if (err.code === err.PERMISSION_DENIED) {
+                        setGpsDenied(true);
+                        setGpsStatus('GPS desactivado');
+                    }
+                    // Use URL params or default
+                    setLocation({ lat: latParam || -33.4489, lng: lngParam || -70.6693, accuracy: 0 });
+                    setLoading(false);
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+            );
+        };
+
+        const startWatching = () => {
+            if (watchIdRef.current !== null) return;
+            
+            const watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    setLocation({
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                        accuracy: position.coords.accuracy
+                    });
+                    
+                    const acc = position.coords.accuracy;
+                    if (acc < 10) setAccuracyText('🟢 Excelente');
+                    else if (acc < 25) setAccuracyText('🟡 Buena');
+                    else if (acc < 50) setAccuracyText('🟠 Moderada');
+                    else setAccuracyText('🔴 Baja');
+                },
+                () => {},
+                { enableHighAccuracy: true, maximumAge: 0, distanceFilter: 5 }
+            );
+            
+            watchIdRef.current = watchId;
+        };
+
+        getLocation();
+
+        return () => {
+            if (watchIdRef.current !== null) {
+                navigator.geolocation.clearWatch(watchIdRef.current);
+            }
+        };
+    }, []);
 
     const handleSendAlert = async () => {
         if (!user || !userData) {
-            setError('Debes iniciar sesión para enviar alertas');
+            setError('Debes iniciar sesión');
             return;
         }
-        
+
+        if (!location) {
+            setError('Necesitamos tu ubicación');
+            return;
+        }
+
         setSending(true);
         setError('');
 
-        try {
-            const result = await sendAlert({
-                tipo: type,
-                lat,
-                lng,
-                userId: user.id,
-                userName: userData.nombre,
-                userPhone: userData.telefono,
-                puestoNumero: userData.puesto_numero,
-                accuracy: 0
-            });
+        const result = await sendAlert({
+            tipo: type,
+            lat: location.lat,
+            lng: location.lng,
+            userId: user.id,
+            userName: userData.nombre,
+            userPhone: userData.telefono,
+            puestoNumero: userData.puesto_numero,
+            accuracy: location.accuracy
+        });
 
-            if (result.success) {
-                setSent(true);
-            } else {
-                setError(result.error || 'Error al enviar alerta');
-            }
-        } catch (err) {
-            setError('Error al enviar alerta');
-        } finally {
-            setSending(false);
+        setSending(false);
+
+        if (result.success) {
+            setSent(true);
+            
+            // Update user stats
+            await supabase
+                .from('usuarios')
+                .update({ 
+                    alertas_enviadas: (userData.alertas_enviadas || 0) + 1,
+                    puntos: (userData.puntos || 0) + 10
+                })
+                .eq('id', user.id);
+        } else {
+            setError('Error al enviar. Intenta de nuevo.');
         }
     };
 
-    const handleEditLocation = () => {
-        navigate(`/loading?type=${type}`);
+    const handleRetryGPS = () => {
+        setLoading(true);
+        setGpsDenied(false);
+        
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setLocation({
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                    accuracy: position.coords.accuracy
+                });
+                setGpsStatus('GPS conectado');
+                setGpsDenied(false);
+                setLoading(false);
+            },
+            (err) => {
+                if (err.code === err.PERMISSION_DENIED) {
+                    setGpsDenied(true);
+                    setGpsStatus('GPS desactivado');
+                }
+                setLoading(false);
+            },
+            { enableHighAccuracy: true, timeout: 15000 }
+        );
     };
 
-    const typeLabel = type === 'insecurity' ? 'Inseguridad' : 'Emergencia Médica';
-    const TypeIcon = type === 'insecurity' ? Shield : Plus;
-    const bgColor = type === 'insecurity' ? 'red' : 'blue';
-
+    // Already sent - show success
     if (sent) {
+        const isInsecurity = type === 'insecurity';
         return (
-            <div className="font-display text-slate-900 dark:text-slate-100 min-h-[calc(100vh-6rem)] flex flex-col bg-[#f6f8f6] dark:bg-[#102216]">
-                <div className="fixed top-0 left-0 -z-10 w-full h-full overflow-hidden pointer-events-none opacity-20">
-                    <div className="absolute -top-24 -left-24 w-96 h-96 bg-[#13ec5b]/30 rounded-full blur-[100px]"></div>
-                    <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-[#13ec5b]/20 rounded-full blur-[100px]"></div>
+            <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ backgroundColor: isInsecurity ? '#dc2626' : '#2563eb', padding: '20px' }}>
+                    <h1 style={{ color: 'white', fontSize: '24px', fontWeight: 'bold', textAlign: 'center' }}>
+                        {isInsecurity ? '🛡️ ALERTA ENVIADA' : '🏥 EMERGENCIA ENVIADA'}
+                    </h1>
                 </div>
-
-                <main className="flex-1 flex flex-col items-center justify-between p-6 max-w-md mx-auto w-full relative z-10">
-                    <div className="w-full flex flex-col items-center pt-8">
-                        <div className="relative flex items-center justify-center mb-8">
-                            <div className="absolute w-32 h-32 bg-[#13ec5b]/20 rounded-full animate-pulse blur-sm"></div>
-                            <div className="relative bg-[#13ec5b] text-slate-900 w-24 h-24 rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(19,236,91,0.6)]">
-                                <span className="material-symbols-outlined text-[64px] font-bold">check</span>
-                            </div>
-                        </div>
-
-                        <h1 className="text-slate-900 dark:text-slate-100 tracking-tight text-[40px] font-extrabold leading-tight text-center px-2 mb-4 uppercase">
-                            ALERTA ENVIADA
-                        </h1>
-                        <p className="text-slate-600 dark:text-slate-400 text-xl font-normal leading-relaxed text-center px-4">
-                            Su ubicación ha sido compartida con seguridad y su familia.
-                        </p>
+                
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px' }}>
+                    <div style={{ width: '120px', height: '120px', backgroundColor: '#22c55e', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+                        <span style={{ fontSize: '60px' }}>✓</span>
                     </div>
+                    
+                    <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1f2937', marginBottom: '10px' }}>¡Alerta Enviada!</h2>
+                    <p style={{ fontSize: '18px', color: '#6b7280', textAlign: 'center', marginBottom: '30px' }}>
+                        {isInsecurity ? 'Las autoridades han sido notificadas' : 'Los servicios de emergencia están en camino'}
+                    </p>
+                    
+                    <button 
+                        onClick={() => navigate('/')}
+                        style={{ backgroundColor: '#374151', color: 'white', fontSize: '18px', fontWeight: 'bold', padding: '16px 40px', borderRadius: '12px', border: 'none' }}
+                    >
+                        Volver al Inicio
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
-                    <div className="w-full py-8">
-                        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 p-6 flex flex-col items-center gap-6">
-                            <div className="text-center">
-                                <p className="text-[#13ec5b] text-sm font-bold tracking-[0.2em] mb-1 uppercase">ESTADO ACTIVO</p>
-                                <h2 className="text-slate-900 dark:text-white text-3xl font-extrabold leading-tight mb-2">Ayuda en camino</h2>
-                                <p className="text-slate-500 dark:text-slate-400 text-lg">
-                                    {type === 'insecurity' ? 'Personal de seguridad alertado' : 'Asistencia médica alertada'}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+    const isInsecurity = type === 'insecurity';
+    const headerColor = isInsecurity ? '#dc2626' : '#2563eb';
+    const mapCenter = location ? [location.lat, location.lng] : [-33.4489, -70.6693];
 
-                    <div className="w-full pb-8">
-                        <div className="flex flex-col gap-4">
-                            <button
-                                onClick={() => navigate('/')}
-                                className="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl h-20 px-5 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xl font-bold leading-normal tracking-wide transition-colors active:bg-slate-300 dark:active:bg-slate-700 border-2 border-slate-300 dark:border-slate-600"
-                            >
-                                <HomeIcon className="mr-3" size={24} />
-                                <span className="truncate">VOLVER AL INICIO</span>
-                            </button>
-                            <p className="text-center text-slate-400 dark:text-slate-500 text-sm font-medium">
-                                Emergencia notificada silenciosamente.
-                            </p>
-                        </div>
-                    </div>
-                </main>
+    // Loading GPS
+    if (loading) {
+        return (
+            <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ backgroundColor: headerColor, padding: '20px' }}>
+                    <h1 style={{ color: 'white', fontSize: '24px', fontWeight: 'bold', textAlign: 'center' }}>
+                        📍 Obteniendo Ubicación
+                    </h1>
+                </div>
+                
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px' }}>
+                    <div style={{ width: '60px', height: '60px', border: '4px solid ' + headerColor, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '20px' }}></div>
+                    <p style={{ fontSize: '18px', color: '#6b7280' }}>{gpsStatus}</p>
+                </div>
+                
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
         );
     }
 
     return (
-        <div className="font-display text-slate-900 dark:text-slate-100 min-h-[calc(100vh-6rem)] flex flex-col bg-[#f6f8f6] dark:bg-[#102216]">
-            {/* Map Preview with OpenStreetMap */}
-            <div className="relative h-56 w-full">
-                <MapContainer
-                    center={[lat || -33.4489, lng || -70.6693]}
-                    zoom={zoom}
-                    style={{ width: "100%", height: "100%" }}
-                    zoomControl={false}
-                >
-                    <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
-                    {lat && lng && <Marker position={[lat, lng]} />}
-                    <MapControls zoom={zoom} setZoom={setZoom} />
-                </MapContainer>
-
-                {/* Location info overlay */}
-                <div className="absolute bottom-3 left-3 right-3 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-3 shadow-lg z-[1000]">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <div className={`p-1.5 rounded-full bg-${bgColor}-100 dark:bg-${bgColor}-900/30`}>
-                                <TypeIcon className={`w-4 h-4 text-${bgColor}-600`} />
-                            </div>
-                            <div>
-                                <p className="text-xs font-medium text-slate-800 dark:text-white">Ubicación detectada</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">{address}</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={handleEditLocation}
-                            className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
-                        >
-                            <Edit size={14} />
-                        </button>
-                    </div>
-                </div>
+        <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6', display: 'flex', flexDirection: 'column', height: '100vh' }}>
+            {/* Header */}
+            <div style={{ backgroundColor: headerColor, padding: '16px' }}>
+                <h1 style={{ color: 'white', fontSize: '22px', fontWeight: 'bold', textAlign: 'center' }}>
+                    {isInsecurity ? '🛡️ INSEGURIDAD' : '🏥 EMERGENCIA MÉDICA'}
+                </h1>
             </div>
 
-            <main className="flex-1 flex flex-col items-center justify-between p-6 max-w-md mx-auto w-full">
-                <div className="w-full flex flex-col items-center pt-4">
-                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-${bgColor}-100 dark:bg-${bgColor}-900/30 mb-3`}>
-                        <TypeIcon className={`w-4 h-4 text-${bgColor}-600`} />
-                        <span className={`text-sm font-semibold text-${bgColor}-700 dark:text-${bgColor}-400`}>
-                            {typeLabel}
-                        </span>
-                    </div>
+            {/* GPS Status */}
+            <div style={{ backgroundColor: gpsDenied ? '#fee2e2' : '#dcfce7', padding: '12px', margin: '12px', borderRadius: '12px' }}>
+                <p style={{ fontSize: '14px', color: gpsDenied ? '#dc2626' : '#166534', fontWeight: '500' }}>
+                    {gpsDenied ? '⚠️ ' + gpsStatus : '✅ ' + gpsStatus}
+                    {accuracyText && ' - ' + accuracyText}
+                </p>
+            </div>
 
-                    <h1 className="text-slate-900 dark:text-slate-100 tracking-tight text-[28px] font-extrabold leading-tight text-center px-2 mb-3 uppercase">
-                        Confirmar Alerta
-                    </h1>
-                    <p className="text-slate-600 dark:text-slate-400 text-base text-center px-4 mb-4">
-                        ¿La ubicación es correcta? Presione enviar para notificar a seguridad.
+            {/* GPS denied - show retry button */}
+            {gpsDenied && (
+                <div style={{ padding: '0 12px' }}>
+                    <button 
+                        onClick={handleRetryGPS}
+                        style={{ width: '100%', backgroundColor: '#3b82f6', color: 'white', fontSize: '16px', fontWeight: '600', padding: '12px', borderRadius: '8px', border: 'none' }}
+                    >
+                        🔄 Activar GPS
+                    </button>
+                </div>
+            )}
+
+            {/* Coordinates */}
+            {location && (
+                <div style={{ backgroundColor: '#dbeafe', padding: '12px', margin: '12px', borderRadius: '12px' }}>
+                    <p style={{ fontSize: '14px', color: '#1e40af', fontFamily: 'monospace' }}>
+                        📍 {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
                     </p>
-
-                    <div className="w-full bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-100 dark:border-slate-700 p-3">
-                        <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                            <MapPin className="w-4 h-4 text-green-500" />
-                            <span className="text-sm">Su ubicación se compartirá con el personal de seguridad</span>
-                        </div>
-                    </div>
                 </div>
+            )}
 
-                <div className="w-full pb-4">
-                    <div className="flex flex-col gap-3">
-                        <button
-                            onClick={handleSendAlert}
-                            disabled={sending}
-                            className={`w-full bg-${bgColor}-600 hover:bg-${bgColor}-700 disabled:bg-${bgColor}-400 text-white py-4 px-6 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-lg transition-colors`}
-                        >
-                            {sending ? (
-                                <>
-                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                    Enviando...
-                                </>
-                            ) : (
-                                <>
-                                    <Send size={24} />
-                                    ENVIAR ALERTA
-                                </>
-                            )}
-                        </button>
-                        <button
-                            onClick={handleEditLocation}
-                            className="w-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 py-3 px-6 rounded-xl font-medium flex items-center justify-center gap-2"
-                        >
-                            <Edit size={20} />
-                            Cambiar ubicación
-                        </button>
-                    </div>
+            {/* Map */}
+            <div style={{ flex: 1, margin: '8px', borderRadius: '12px', overflow: 'hidden', minHeight: '250px' }}>
+                <MapContainer center={mapCenter} zoom={16} style={{ height: '100%', width: '100%' }}>
+                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                    {location && <Marker position={[location.lat, location.lng]} icon={customIcon} />}
+                </MapContainer>
+            </div>
+
+            {/* Error message */}
+            {error && (
+                <div style={{ backgroundColor: '#fee2e2', padding: '12px', margin: '12px', borderRadius: '8px' }}>
+                    <p style={{ color: '#dc2626', fontSize: '14px' }}>{error}</p>
                 </div>
-            </main>
+            )}
+
+            {/* Send Button */}
+            <div style={{ padding: '16px', backgroundColor: 'white', paddingBottom: '100px' }}>
+                <button 
+                    onClick={handleSendAlert}
+                    disabled={sending || !location}
+                    style={{ 
+                        width: '100%', 
+                        backgroundColor: sending ? '#9ca3af' : headerColor, 
+                        color: 'white', 
+                        fontSize: '22px', 
+                        fontWeight: 'bold', 
+                        padding: '20px', 
+                        borderRadius: '12px', 
+                        border: 'none',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                    }}
+                >
+                    {sending ? 'Enviando...' : '📤 ENVIAR ALERTA'}
+                </button>
+                
+                <button 
+                    onClick={() => navigate('/')}
+                    style={{ width: '100%', marginTop: '12px', backgroundColor: '#e5e7eb', color: '#374151', fontSize: '16px', fontWeight: '600', padding: '14px', borderRadius: '12px', border: 'none' }}
+                >
+                    Cancelar
+                </button>
+            </div>
         </div>
     );
 }

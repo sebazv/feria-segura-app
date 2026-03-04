@@ -1,13 +1,11 @@
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
 
 export default function StitchHome() {
     const navigate = useNavigate();
-    // MODO PRUEBA: siempre activo
-    const scheduleStatus = { activo: true, checking: false };
 
     const handleEmergency = (type) => {
-        navigate(`/loading?type=${type}`);
+        // Go directly to confirmation - it will get GPS itself
+        navigate(`/confirmation?type=${type}`);
     };
 
     return (
@@ -25,6 +23,7 @@ export default function StitchHome() {
             </header>
 
             <main className="flex-1 flex flex-col p-6 gap-4">
+                {/* Inseguridad - ROJO */}
                 <button
                     onClick={() => handleEmergency('insecurity')}
                     className="flex-1 rounded-2xl shadow-lg flex flex-col items-center justify-center gap-4 transition-transform active:scale-95 bg-red-600 hover:bg-red-700"
@@ -33,12 +32,13 @@ export default function StitchHome() {
                     <span className="text-2xl font-bold text-white">INSEGURIDAD</span>
                 </button>
 
+                {/* Médica - AZUL */}
                 <button
                     onClick={() => handleEmergency('medical')}
                     className="flex-1 rounded-2xl shadow-lg flex flex-col items-center justify-center gap-4 transition-transform active:scale-95 bg-blue-600 hover:bg-blue-700"
                 >
                     <span className="text-5xl">🏥</span>
-                    <span className="text-2xl font-bold text-white">EMERGENCIA</span>
+                    <span className="text-2xl font-bold text-white">EMERGENCIA MÉDICA</span>
                 </button>
             </main>
         </div>
