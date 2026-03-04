@@ -32,29 +32,27 @@ export default function LoadingPage() {
     const [gpsDenied, setGpsDenied] = useState(false);
     const [sending, setSending] = useState(false);
     const [sent, setSent] = useState(false);
+    const [userData, setUserData] = useState(null);
     const watchIdRef = useRef(null);
     const timeoutRef = useRef(null);
 
     useEffect(() => {
+        const savedUserId = localStorage.getItem('feria_user_id');
+        const savedUserData = localStorage.getItem('feria_user_data');
+        if (savedUserId && savedUserData) {
+            try {
+                const data = JSON.parse(savedUserData);
+                setUserData({ id: savedUserId, ...data });
+            } catch (e) {}
+        }
+    }, []);
+
+    useEffect(() => {
         const getLocation = () => {
             setLocation({ lat: -33.4489, lng: -70.6693, accuracy: 0 });
-            
-            if (!navigator.geolocation) {
-                setGpsDenied(true);
-                setGpsStatus('GPS no disponible');
-                setLoading(false);
-                return;
-            }
-
+            if (!navigator.geolocation) { setGpsDenied(true); setGpsStatus('GPS no disponible'); setLoading(false); return; }
             setGpsStatus('Buscando señal GPS...');
-
-            timeoutRef.current = setTimeout(() => {
-                if (loading) {
-                    setGpsStatus('Usando ubicación por defecto');
-                    setLoading(false);
-                }
-            }, 8000);
-
+            timeoutRef.current = setTimeout(() => { if (loading) { setGpsStatus('Ubicación por defecto'); setLoading(false); } }, 8000);
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     clearTimeout(timeoutRef.current);
@@ -78,7 +76,6 @@ export default function LoadingPage() {
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         };
-
         const startWatching = () => {
             if (watchIdRef.current !== null) return;
             const watchId = navigator.geolocation.watchPosition(
@@ -95,25 +92,22 @@ export default function LoadingPage() {
             );
             watchIdRef.current = watchId;
         };
-
         getLocation();
         return () => { clearTimeout(timeoutRef.current); if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current); };
     }, []);
 
     const handleSendAlert = async () => {
         if (!location) return;
+        if (!userData) { alert('Debes iniciar sesión primero'); navigate('/login'); return; }
         setSending(true);
         try {
-            const usuarioData = localStorage.getItem('feria_usuario');
-            const usuario = usuarioData ? JSON.parse(usuarioData) : null;
-            if (!usuario) { alert('Debes iniciar sesión'); setSending(false); return; }
             const { error } = await supabase.from('alertas').insert({
                 tipo: type, lat: location.lat, lng: location.lng, accuracy: location.accuracy,
-                user_id: usuario.id, user_name: usuario.nombre, user_phone: usuario.telefono,
-                puesto_numero: usuario.puesto_numero, status: 'active', created_at: new Date().toISOString()
+                user_id: userData.id, user_name: userData.nombre, user_phone: userData.telefono,
+                puesto_numero: userData.puesto_numero, status: 'active', created_at: new Date().toISOString()
             });
             if (error) throw error;
-            await supabase.from('usuarios').update({ alertas_enviadas: (usuario.alertas_enviadas || 0) + 1, puntos: (usuario.puntos || 0) + 10 }).eq('id', usuario.id);
+            await supabase.from('usuarios').update({ alertas_enviadas: (userData.alertas_enviadas || 0) + 1, puntos: (userData.puntos || 0) + 10 }).eq('id', userData.id);
             setSent(true);
             setTimeout(() => navigate('/'), 2000);
         } catch (err) { alert('Error al enviar. Intenta de nuevo.'); setSending(false); }
@@ -163,6 +157,7 @@ export default function LoadingPage() {
             <div style={{ backgroundColor: headerColor, padding: '16px' }}><h1 style={{ color: 'white', fontSize: '22px', fontWeight: 'bold', textAlign: 'center' }}>{isInsecurity ? '🛡️ INSEGURIDAD' : '🏥 EMERGENCIA'}</h1></div>
             <div style={{ backgroundColor: gpsDenied ? '#fee2e2' : '#dcfce7', padding: '12px', margin: '12px', borderRadius: '12px' }}><p style={{ fontSize: '14px', color: gpsDenied ? '#dc2626' : '#166534' }}>{gpsDenied ? '⚠️ ' + gpsStatus : '✅ ' + gpsStatus}{accuracyText && ' - ' + accuracyText}</p></div>
             {gpsDenied && <div style={{ padding: '0 12px' }}><button onClick={handleRetryGPS} style={{ width: '100%', backgroundColor: '#3b82f6', color: 'white', fontSize: '16px', padding: '12px', borderRadius: '8px', border: 'none' }}>🔄 Activar GPS</button></div>}
+            {userData && <div style={{ backgroundColor: '#fef3c7', padding: '12px', margin: '12px', borderRadius: '12px' }}><p style={{ fontSize: '14px', color: '#92400e' }}>👤 {userData.nombre}</p></div>}
             {location && <div style={{ backgroundColor: '#dbeafe', padding: '12px', margin: '12px', borderRadius: '12px' }}><p style={{ fontSize: '14px', color: '#1e40af', fontFamily: 'monospace' }}>📍 {location.lat.toFixed(6)}, {location.lng.toFixed(6)}</p></div>}
             <div style={{ flex: 1, margin: '8px', borderRadius: '12px', overflow: 'hidden', minHeight: '250px' }}><MapContainer center={mapCenter} zoom={16} style={{ height: '100%', width: '100%' }}><TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />{location && <Marker position={[location.lat, location.lng]} icon={customIcon} />}</MapContainer></div>
             <div style={{ padding: '16px', backgroundColor: 'white', paddingBottom: '100px' }}>
