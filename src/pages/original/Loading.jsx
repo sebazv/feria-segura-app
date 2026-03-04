@@ -27,25 +27,37 @@ export default function LoadingPage() {
 
     const [location, setLocation] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [gpsStatus, setGpsStatus] = useState('Iniciando GPS...');
+    const [gpsStatus, setGpsStatus] = useState('Iniciando...');
     const [accuracyText, setAccuracyText] = useState('');
     const [gpsDenied, setGpsDenied] = useState(false);
     const [sending, setSending] = useState(false);
     const [sent, setSent] = useState(false);
     const watchIdRef = useRef(null);
+    const timeoutRef = useRef(null);
 
     useEffect(() => {
         const getLocation = () => {
+            setLocation({ lat: -33.4489, lng: -70.6693, accuracy: 0 });
+            
             if (!navigator.geolocation) {
                 setGpsDenied(true);
                 setGpsStatus('GPS no disponible');
-                setLocation({ lat: -33.4489, lng: -70.6693, accuracy: 0 });
                 setLoading(false);
                 return;
             }
 
+            setGpsStatus('Buscando señal GPS...');
+
+            timeoutRef.current = setTimeout(() => {
+                if (loading) {
+                    setGpsStatus('Usando ubicación por defecto');
+                    setLoading(false);
+                }
+            }, 8000);
+
             navigator.geolocation.getCurrentPosition(
                 (position) => {
+                    clearTimeout(timeoutRef.current);
                     setLocation({ lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy });
                     setGpsStatus('GPS conectado');
                     setLoading(false);
@@ -57,11 +69,13 @@ export default function LoadingPage() {
                     startWatching();
                 },
                 (err) => {
+                    clearTimeout(timeoutRef.current);
                     if (err.code === err.PERMISSION_DENIED) { setGpsDenied(true); setGpsStatus('GPS desactivado'); }
+                    else setGpsStatus('Sin señal GPS');
                     setLocation({ lat: -33.4489, lng: -70.6693, accuracy: 0 });
                     setLoading(false);
                 },
-                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         };
 
@@ -83,35 +97,26 @@ export default function LoadingPage() {
         };
 
         getLocation();
-        return () => { if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current); };
+        return () => { clearTimeout(timeoutRef.current); if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current); };
     }, []);
 
     const handleSendAlert = async () => {
         if (!location) return;
         setSending(true);
-
         try {
             const usuarioData = localStorage.getItem('feria_usuario');
             const usuario = usuarioData ? JSON.parse(usuarioData) : null;
-
             if (!usuario) { alert('Debes iniciar sesión'); setSending(false); return; }
-
             const { error } = await supabase.from('alertas').insert({
                 tipo: type, lat: location.lat, lng: location.lng, accuracy: location.accuracy,
                 user_id: usuario.id, user_name: usuario.nombre, user_phone: usuario.telefono,
                 puesto_numero: usuario.puesto_numero, status: 'active', created_at: new Date().toISOString()
             });
-
             if (error) throw error;
-
             await supabase.from('usuarios').update({ alertas_enviadas: (usuario.alertas_enviadas || 0) + 1, puntos: (usuario.puntos || 0) + 10 }).eq('id', usuario.id);
-
             setSent(true);
             setTimeout(() => navigate('/'), 2000);
-        } catch (err) {
-            alert('Error al enviar. Intenta de nuevo.');
-            setSending(false);
-        }
+        } catch (err) { alert('Error al enviar. Intenta de nuevo.'); setSending(false); }
     };
 
     const handleRetryGPS = () => {
@@ -119,7 +124,7 @@ export default function LoadingPage() {
         navigator.geolocation.getCurrentPosition(
             (position) => { setLocation({ lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy }); setGpsStatus('GPS conectado'); setGpsDenied(false); setLoading(false); },
             (err) => { if (err.code === err.PERMISSION_DENIED) { setGpsDenied(true); setGpsStatus('GPS desactivado'); } setLoading(false); },
-            { enableHighAccuracy: true, timeout: 15000 }
+            { enableHighAccuracy: true, timeout: 10000 }
         );
     };
 
@@ -130,15 +135,10 @@ export default function LoadingPage() {
     if (sent) {
         return (
             <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-                <div style={{ backgroundColor: headerColor, padding: '20px' }}>
-                    <h1 style={{ color: 'white', fontSize: '24px', fontWeight: 'bold', textAlign: 'center' }}>{isInsecurity ? '🛡️ ALERTA ENVIADA' : '🏥 EMERGENCIA ENVIADA'}</h1>
-                </div>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px' }}>
-                    <div style={{ width: '120px', height: '120px', backgroundColor: '#22c55e', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
-                        <span style={{ fontSize: '60px' }}>✓</span>
-                    </div>
-                    <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1f2937' }}>¡Alerta Enviada!</h2>
-                    <p style={{ fontSize: '14px', color: '#9ca3af', marginTop: '20px' }}>Redirigiendo...</p>
+                <div style={{ backgroundColor: headerColor, padding: '20px' }}><h1 style={{ color: 'white', fontSize: '24px', fontWeight: 'bold', textAlign: 'center' }}>{isInsecurity ? '🛡️ ALERTA ENVIADA' : '🏥 EMERGENCIA ENVIADA'}</h1></div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px' }}>
+                    <div style={{ width: '100px', height: '100px', backgroundColor: '#22c55e', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}><span style={{ fontSize: '50px' }}>✓</span></div>
+                    <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1f2937' }}>¡Alerta Enviada!</h2>
                 </div>
             </div>
         );
@@ -147,11 +147,12 @@ export default function LoadingPage() {
     if (loading) {
         return (
             <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-                <div style={{ backgroundColor: headerColor, padding: '20px' }}><h1 style={{ color: 'white', fontSize: '24px', fontWeight: 'bold', textAlign: 'center' }}>📍 {isInsecurity ? '🛡️ INSEGURIDAD' : '🏥 EMERGENCIA'}</h1></div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px' }}>
-                    <div style={{ width: '60px', height: '60px', border: '4px solid ' + headerColor, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                <div style={{ backgroundColor: headerColor, padding: '20px' }}><h1 style={{ color: 'white', fontSize: '24px', fontWeight: 'bold', textAlign: 'center' }}>{isInsecurity ? '🛡️ INSEGURIDAD' : '🏥 EMERGENCIA'}</h1></div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px' }}>
+                    <div style={{ width: '60px', height: '60px', border: '4px solid ' + headerColor, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '20px' }}></div>
+                    <p style={{ fontSize: '18px', color: '#6b7280' }}>{gpsStatus}</p>
+                    <button onClick={() => setLoading(false)} style={{ marginTop: '30px', backgroundColor: '#9ca3af', color: 'white', fontSize: '16px', padding: '12px 24px', borderRadius: '8px', border: 'none' }}>⏭️ Continuar sin GPS</button>
                 </div>
-                <p style={{ textAlign: 'center', color: '#6b7280' }}>{gpsStatus}</p>
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
         );
