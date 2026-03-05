@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Clock, Shield, X, Monitor, Smartphone, Globe } from 'lucide-react';
 import { supabase } from '../../lib/supabase/client';
+import BackButton from '../../components/BackButton';
 
 export default function SessionsPage({ onClose }) {
     const [sessions, setSessions] = useState([]);
@@ -45,10 +46,9 @@ export default function SessionsPage({ onClose }) {
     return (
         <div className="min-h-screen bg-gray-50 p-4 pb-24">
             <div className="flex items-center justify-between mb-6">
+                <BackButton />
                 <h1 className="text-2xl font-bold text-gray-800">Historial de Sesiones</h1>
-                <button onClick={onClose} className="p-2 bg-gray-200 rounded-lg">
-                    <X size={20} />
-                </button>
+                <div className="w-10"></div>
             </div>
 
             {loading ? (

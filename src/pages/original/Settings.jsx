@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Moon, Sun, Download, Share2, Shield, Bell, User, X, Check } from 'lucide-react';
 import { supabase } from '../../lib/supabase/client';
+import BackButton from '../../components/BackButton';
 
 export default function SettingsPage({ onClose }) {
     const [userData, setUserData] = useState(null);
@@ -82,10 +83,9 @@ export default function SettingsPage({ onClose }) {
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-24">
             <div className="flex items-center justify-between mb-6">
+                <BackButton />
                 <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Configuración</h1>
-                <button onClick={onClose} className="p-2 bg-gray-200 dark:bg-gray-700 rounded-lg">
-                    <X size={20} className="dark:text-white" />
-                </button>
+                <div className="w-10"></div>
             </div>
 
             {/* Dark Mode */}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, TrendingUp, AlertTriangle, CheckCircle, Clock, Download, BarChart3 } from 'lucide-react';
 import { supabase } from '../../lib/supabase/client';
+import BackButton from '../../components/BackButton';
 
 export default function ReportsPage() {
     const navigate = useNavigate();
@@ -123,10 +124,13 @@ export default function ReportsPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 p-4 pb-24">
-            <h1 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                <BarChart3 size={24} />
-                Reportes
-            </h1>
+            <div className="flex items-center gap-4 mb-6">
+                <BackButton />
+                <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    <BarChart3 size={24} />
+                    Reportes
+                </h1>
+            </div>
             
             {/* Stats Cards */}
             <div className="grid grid-cols-2 gap-3 mb-6">
