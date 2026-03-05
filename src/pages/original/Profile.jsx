@@ -383,6 +383,10 @@ export default function ProfilePage() {
                 
                 {isAdmin && (
                     <>
+                        <button onClick={() => navigate('/reports')} className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 border-b border-gray-100">
+                            <BarChart3 className="w-5 h-5 text-purple-600" />
+                            <span className="text-gray-800">Reportes</span>
+                        </button>
                         <button onClick={() => navigate('/users')} className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 border-b border-gray-100">
                             <User className="w-5 h-5 text-purple-600" />
                             <span className="text-gray-800">Gestionar Usuarios</span>
