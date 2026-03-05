@@ -25,6 +25,7 @@ export default function HistoryPage() {
     const [alertas, setAlertas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedAlert, setSelectedAlert] = useState(null);
+    const [deleting, setDeleting] = useState(false);
     
     const [userData, setUserData] = useState(null);
 
@@ -84,6 +85,62 @@ export default function HistoryPage() {
             return <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">Resuelta</span>;
         }
         return <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">{status}</span>;
+    };
+
+    // Delete alert (admin only)
+    const handleDeleteAlert = async () => {
+        if (!confirm('¿Eliminar esta alerta?')) return;
+        
+        setDeleting(true);
+        
+        try {
+            await supabase.from('alertas').delete().eq('id', selectedAlert.id);
+            
+            // Remove from local list
+            setAlertas(alertas.filter(a => a.id !== selectedAlert.id));
+            setSelectedAlert(null);
+            alert('✅ Alerta eliminada');
+        } catch (err) {
+            console.error('Error:', err);
+            alert('Error al eliminar');
+        } finally {
+            setDeleting(false);
+        }
+    };
+
+    // Resolve alert (admin only)
+    const handleResolveAlert = async () => {
+        if (!confirm('¿Marcar como resuelta?')) return;
+        
+        setDeleting(true);
+        
+        try {
+            await supabase.from('alertas').update({ 
+                status: 'resolved',
+                resolved_at: new Date().toISOString()
+            }).eq('id', selectedAlert.id);
+            
+            // Update local list
+            setAlertas(alertas.map(a => 
+                a.id === selectedAlert.id 
+                    ? { ...a, status: 'resolved', resolved_at: new Date().toISOString() }
+                    : a
+            ));
+            
+            // Update selected alert
+            setSelectedAlert({ 
+                ...selectedAlert, 
+                status: 'resolved', 
+                resolved_at: new Date().toISOString() 
+            });
+            
+            alert('✅ Alerta resuelta');
+        } catch (err) {
+            console.error('Error:', err);
+            alert('Error al resolver');
+        } finally {
+            setDeleting(false);
+        }
     };
 
     // Modal de detalles
@@ -158,7 +215,27 @@ export default function HistoryPage() {
                 </div>
                 
                 {/* Botón cerrar */}
-                <div className="p-4">
+                <div className="p-4 space-y-3">
+                    {/* Botones de admin */}
+                    {userData?.role === 'admin' && selectedAlert.status === 'active' && (
+                        <>
+                            <button 
+                                onClick={handleResolveAlert}
+                                disabled={deleting}
+                                className="w-full bg-green-100 text-green-700 py-3 rounded-xl font-medium disabled:bg-gray-200"
+                            >
+                                ✓ Marcar como Resuelta
+                            </button>
+                            <button 
+                                onClick={handleDeleteAlert}
+                                disabled={deleting}
+                                className="w-full bg-red-100 text-red-700 py-3 rounded-xl font-medium disabled:bg-gray-200"
+                            >
+                                🗑️ Eliminar Alerta
+                            </button>
+                        </>
+                    )}
+                    
                     <button 
                         onClick={() => setSelectedAlert(null)}
                         className="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-medium"
