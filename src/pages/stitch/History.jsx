@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase/client';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import BackButton from '../../components/BackButton';
 
 // Fix leaflet marker
 delete L.Icon.Default.prototype._getIconUrl;
@@ -249,10 +250,13 @@ export default function HistoryPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 p-4 pb-24">
-            <h1 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                <HistoryIcon size={24} />
-                Historial
-            </h1>
+            <div className="flex items-center gap-4 mb-6">
+                <BackButton />
+                <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    <HistoryIcon size={24} />
+                    Historial
+                </h1>
+            </div>
             
             {loading ? (
                 <div className="flex justify-center py-12">
