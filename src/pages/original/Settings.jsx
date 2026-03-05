@@ -1,0 +1,178 @@
+import { useState, useEffect } from 'react';
+import { Moon, Sun, Download, Share2, Shield, Bell, User, X, Check } from 'lucide-react';
+import { supabase } from '../../lib/supabase/client';
+
+export default function SettingsPage({ onClose }) {
+    const [userData, setUserData] = useState(null);
+    const [darkMode, setDarkMode] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [user, setUser] = useState(null);
+
+    useEffect(() => {
+        const savedUserId = localStorage.getItem('feria_user_id');
+        const savedUserData = localStorage.getItem('feria_user_data');
+        
+        if (savedUserId && savedUserData) {
+            const data = JSON.parse(savedUserData);
+            setUser({ id: savedUserId });
+            setUserData({ id: savedUserId, ...data });
+            setDarkMode(data.modo_oscuro || false);
+        }
+    }, []);
+
+    // Apply dark mode
+    useEffect(() => {
+        if (darkMode) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }, [darkMode]);
+
+    const handleSaveDarkMode = async () => {
+        setSaving(true);
+        try {
+            await supabase
+                .from('usuarios')
+                .update({ modo_oscuro: darkMode })
+                .eq('id', user.id);
+            
+            const updatedData = { ...userData, modo_oscuro: darkMode };
+            localStorage.setItem('feria_user_data', JSON.stringify(updatedData));
+            setUserData(updatedData);
+            alert('Configuración guardada');
+        } catch (err) {
+            console.error(err);
+            alert('Error al guardar');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Export user data (GDPR)
+    const handleExportData = async () => {
+        try {
+            const [userDataQ, alertsQ, contactsQ] = await Promise.all([
+                supabase.from('usuarios').select('*').eq('id', user.id).single(),
+                supabase.from('alertas').select('*').eq('user_id', user.id),
+                supabase.from('contactos_emergencia').select('*').eq('usuario_id', user.id)
+            ]);
+
+            const exportData = {
+                usuario: userDataQ.data,
+                alertas: alertsQ.data || [],
+                contactos_emergencia: contactsQ.data || [],
+                fecha_exportacion: new Date().toISOString()
+            };
+
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `mis_datos_feria_segura_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            
+            alert('Datos exportados');
+        } catch (err) {
+            console.error(err);
+            alert('Error al exportar');
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-24">
+            <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Configuración</h1>
+                <button onClick={onClose} className="p-2 bg-gray-200 dark:bg-gray-700 rounded-lg">
+                    <X size={20} className="dark:text-white" />
+                </button>
+            </div>
+
+            {/* Dark Mode */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md mb-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        {darkMode ? <Moon className="text-purple-500" size={24} /> : <Sun className="text-yellow-500" size={24} />}
+                        <div>
+                            <p className="font-bold text-gray-800 dark:text-white">Modo Oscuro</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Cambiar tema de la app</p>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={() => { setDarkMode(!darkMode); handleSaveDarkMode(); }}
+                        className={`w-14 h-8 rounded-full p-1 transition-colors ${darkMode ? 'bg-purple-600' : 'bg-gray-300'}`}
+                    >
+                        <div className={`w-6 h-6 bg-white rounded-full shadow transition-transform ${darkMode ? 'translate-x-6' : ''}`}></div>
+                    </button>
+                </div>
+            </div>
+
+            {/* Notificaciones */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md mb-4">
+                <div className="flex items-center gap-3">
+                    <Bell className="text-blue-500" size={24} />
+                    <div className="flex-1">
+                        <p className="font-bold text-gray-800 dark:text-white">Notificaciones Push</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Recibir alertas de emergencia</p>
+                    </div>
+                    <span className="text-sm text-gray-400">Próximamente</span>
+                </div>
+            </div>
+
+            {/* Emergency Contacts */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md mb-4">
+                <div className="flex items-center gap-3">
+                    <Shield className="text-red-500" size={24} />
+                    <div className="flex-1">
+                        <p className="font-bold text-gray-800 dark:text-white">Contactos de Emergencia</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Administrar contactos a notificar</p>
+                    </div>
+                    <span className="text-sm text-gray-400">En Perfil</span>
+                </div>
+            </div>
+
+            {/* Export Data */}
+            <button onClick={handleExportData} className="w-full bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md mb-4">
+                <div className="flex items-center gap-3">
+                    <Download className="text-green-500" size={24} />
+                    <div className="text-left">
+                        <p className="font-bold text-gray-800 dark:text-white">Exportar Mis Datos</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Descargar todos tus datos (GDPR)</p>
+                    </div>
+                </div>
+            </button>
+
+            {/* Share App */}
+            <button className="w-full bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md mb-4">
+                <div className="flex items-center gap-3">
+                    <Share2 className="text-blue-500" size={24} />
+                    <div className="text-left">
+                        <p className="font-bold text-gray-800 dark:text-white">Invitar Feriantes</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Compartir app con otros comerciantes</p>
+                    </div>
+                </div>
+            </button>
+
+            {/* QR Code Info */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
+                <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                        <div className="w-6 h-6 border-2 border-gray-400 grid grid-cols-2 gap-0.5">
+                            <div className="bg-black"></div>
+                            <div className="bg-white"></div>
+                            <div className="bg-white"></div>
+                            <div className="bg-black"></div>
+                        </div>
+                    </div>
+                    <div className="flex-1">
+                        <p className="font-bold text-gray-800 dark:text-white">Registro con QR</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Escanea para registrarte más rápido</p>
+                    </div>
+                    <span className="text-sm text-gray-400">Próximamente</span>
+                </div>
+            </div>
+
+            <p className="text-center text-gray-400 text-xs mt-6">Feria Segura v1.1.0</p>
+        </div>
+    );
+}

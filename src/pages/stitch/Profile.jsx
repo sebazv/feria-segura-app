@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Trash2, AlertTriangle, Edit2, X, BarChart3, Clock, Bell } from 'lucide-react';
+import { User, Trash2, AlertTriangle, Edit2, X, BarChart3, Clock, Bell, Shield, Settings } from 'lucide-react';
 import { supabase } from '../../lib/supabase/client';
 
 export default function ProfilePage() {
@@ -283,6 +283,21 @@ export default function ProfilePage() {
                 <button onClick={() => navigate('/history')} className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 border-b border-gray-100">
                     <Clock className="w-5 h-5 text-gray-500" />
                     <span className="text-gray-800">Historial</span>
+                </button>
+                
+                <button onClick={() => navigate('/contacts')} className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 border-b border-gray-100">
+                    <Shield className="w-5 h-5 text-red-600" />
+                    <span className="text-gray-800">Contactos de Emergencia</span>
+                </button>
+                
+                <button onClick={() => navigate('/settings')} className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 border-b border-gray-100">
+                    <Settings className="w-5 h-5 text-gray-600" />
+                    <span className="text-gray-800">Configuración</span>
+                </button>
+                
+                <button onClick={() => navigate('/sessions')} className="w-full flex items-center gap-3 p-4 hover:bg-gray-50">
+                    <Clock className="w-5 h-5 text-gray-500" />
+                    <span className="text-gray-800">Mis Sesiones</span>
                 </button>
                 
                 {isAdmin && (
