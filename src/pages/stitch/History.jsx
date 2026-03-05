@@ -1,195 +1,227 @@
 import { useState, useEffect } from 'react';
-import { Clock, MapPin, Shield, Plus, History, Loader } from 'lucide-react';
-import { getUserAlerts } from '../../lib/alerts';
-import { useAuth } from '../../lib/auth';
+import { History as HistoryIcon, AlertTriangle, Shield, MapPin, CheckCircle, Clock, X, Phone, User } from 'lucide-react';
+import { supabase } from '../../lib/supabase/client';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix leaflet marker
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+const customIcon = L.icon({
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
 
 export default function HistoryPage() {
-  const [history, setHistory] = useState([]);
-  const [filter, setFilter] = useState('all');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const { user } = useAuth();
+    const [alertas, setAlertas] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedAlert, setSelectedAlert] = useState(null);
+    
+    const [userData, setUserData] = useState(null);
 
-  useEffect(() => {
-    const loadAlerts = async () => {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const result = await getUserAlerts(user.id);
-        if (result.success) {
-          setHistory(result.alertas || []);
-        } else {
-          setError(result.error);
+    useEffect(() => {
+        const savedUserId = localStorage.getItem('feria_user_id');
+        const savedUserData = localStorage.getItem('feria_user_data');
+        if (savedUserId && savedUserData) {
+            try {
+                setUserData({ id: savedUserId, ...JSON.parse(savedUserData) });
+            } catch (e) {}
         }
-      } catch (err) {
-        setError('Error al cargar historial');
-      } finally {
-        setLoading(false);
-      }
+    }, []);
+
+    useEffect(() => {
+        const loadAlerts = async () => {
+            if (userData?.role === 'admin') {
+                const { data } = await supabase
+                    .from('alertas')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(50);
+                if (data) setAlertas(data);
+            } else if (userData?.id) {
+                const { data } = await supabase
+                    .from('alertas')
+                    .select('*')
+                    .eq('user_id', userData.id)
+                    .order('created_at', { ascending: false })
+                    .limit(50);
+                if (data) setAlertas(data);
+            }
+            setLoading(false);
+        };
+        loadAlerts();
+    }, [userData]);
+
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('es-CL', { 
+            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+        });
     };
 
-    loadAlerts();
-  }, [user]);
+    const getTipoIcon = (tipo) => {
+        return tipo === 'insecurity' ? '🛡️' : '🏥';
+    };
 
-  const filteredHistory = history.filter(item => {
-    if (filter === 'all') return true;
-    return item.tipo === filter;
-  });
+    const getTipoColor = (tipo) => {
+        return tipo === 'insecurity' ? 'bg-red-600' : 'bg-blue-600';
+    };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now - date;
-    
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
+    const getStatusBadge = (status) => {
+        if (status === 'active') {
+            return <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold">Activa</span>;
+        } else if (status === 'resolved') {
+            return <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">Resuelta</span>;
+        }
+        return <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">{status}</span>;
+    };
 
-    if (minutes < 60) return `Hace ${minutes} min`;
-    if (hours < 24) return `Hace ${hours} h`;
-    if (days < 7) return `Hace ${days} días`;
-    
-    return date.toLocaleDateString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-  };
-
-  const stats = {
-    total: history.length,
-    insecurity: history.filter(h => h.tipo === 'insecurity').length,
-    medical: history.filter(h => h.tipo === 'medical').length,
-  };
-
-  if (loading) {
-    return (
-      <div className="p-4 pb-24 bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader className="w-8 h-8 animate-spin text-red-600 mx-auto mb-2" />
-          <p className="text-gray-500">Cargando historial...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-4 pb-24 bg-gray-50 dark:bg-gray-900 min-h-screen">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-1">
-          Mi Historial
-        </h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm">
-          Registro de alertas enviadas
-        </p>
-      </header>
-
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-          {error}
-        </div>
-      )}
-
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-md text-center">
-          <p className="text-2xl font-bold text-gray-800 dark:text-white">{stats.total}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-md text-center">
-          <p className="text-2xl font-bold text-red-600">{stats.insecurity}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Inseguridad</p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-md text-center">
-          <p className="text-2xl font-bold text-blue-600">{stats.medical}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Médicas</p>
-        </div>
-      </div>
-
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-            filter === 'all' 
-              ? 'bg-gray-800 dark:bg-white text-white dark:text-gray-800' 
-              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
-          }`}
-        >
-          Todas
-        </button>
-        <button
-          onClick={() => setFilter('insecurity')}
-          className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-            filter === 'insecurity' 
-              ? 'bg-red-600 text-white' 
-              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
-          }`}
-        >
-          Inseguridad
-        </button>
-        <button
-          onClick={() => setFilter('medical')}
-          className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-            filter === 'medical' 
-              ? 'bg-blue-600 text-white' 
-              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
-          }`}
-        >
-          Médicas
-        </button>
-      </div>
-
-      <div className="space-y-3">
-        {filteredHistory.map((item) => (
-          <div 
-            key={item.id}
-            className={`bg-white dark:bg-gray-800 rounded-xl shadow-md border-l-4 p-4 ${
-              item.tipo === 'insecurity' ? 'border-l-red-500' : 'border-l-blue-500'
-            }`}
-          >
-            <div className="flex justify-between items-start mb-2">
-              <div className="flex items-center gap-2">
-                <div className={`p-2 rounded-full ${
-                  item.tipo === 'insecurity' ? 'bg-red-100 dark:bg-red-900/30' : 'bg-blue-100 dark:bg-blue-900/30'
-                }`}>
-                  {item.tipo === 'insecurity' ? (
-                    <Shield className="w-4 h-4 text-red-600" />
-                  ) : (
-                    <Plus className="w-4 h-4 text-blue-600" />
-                  )}
+    // Modal de detalles
+    if (selectedAlert) {
+        const isInsecurity = selectedAlert.tipo === 'insecurity';
+        const headerColor = isInsecurity ? '#dc2626' : '#2563eb';
+        
+        return (
+            <div className="min-h-screen bg-gray-100">
+                {/* Header del modal */}
+                <div style={{ backgroundColor: headerColor }} className="p-4">
+                    <div className="flex items-center justify-between">
+                        <h1 className="text-xl font-bold text-white">
+                            {isInsecurity ? '🛡️ ALERTA DE INSEGURIDAD' : '🏥 EMERGENCIA MÉDICA'}
+                        </h1>
+                        <button onClick={() => setSelectedAlert(null)} className="p-2 bg-white/20 rounded-lg">
+                            <X size={24} className="text-white" />
+                        </button>
+                    </div>
                 </div>
-                <span className="font-medium text-gray-800 dark:text-white capitalize">
-                  {item.tipo === 'insecurity' ? 'Inseguridad' : 'Emergencia Médica'}
-                </span>
-              </div>
-              <span className={`text-xs px-2 py-1 rounded-full ${
-                item.status === 'active' 
-                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                  : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-              }`}>
-                {item.status === 'active' ? 'Activa' : 'Resuelta'}
-              </span>
+                
+                <div className="p-4 space-y-4">
+                    {/* Estado */}
+                    <div className="bg-white rounded-xl p-4 shadow-md">
+                        <p className="text-sm text-gray-500 mb-1">Estado</p>
+                        {getStatusBadge(selectedAlert.status)}
+                    </div>
+                    
+                    {/* Datos del usuario */}
+                    <div className="bg-white rounded-xl p-4 shadow-md">
+                        <p className="text-sm text-gray-500 mb-3">👤 Datos del Reportante</p>
+                        <div className="space-y-2">
+                            <p><strong>Nombre:</strong> {selectedAlert.user_name || 'No disponible'}</p>
+                            <p><strong>Teléfono:</strong> {selectedAlert.user_phone || 'No disponible'}</p>
+                            {selectedAlert.puesto_numero && <p><strong>Puesto:</strong> {selectedAlert.puesto_numero}</p>}
+                            <p><strong>Fecha:</strong> {formatDate(selectedAlert.created_at)}</p>
+                        </div>
+                    </div>
+                    
+                    {/* Mapa */}
+                    <div className="bg-white rounded-xl p-4 shadow-md">
+                        <p className="text-sm text-gray-500 mb-2">📍 Ubicación</p>
+                        <p className="text-xs font-mono text-gray-600 mb-2">
+                            {selectedAlert.lat?.toFixed(6)}, {selectedAlert.lng?.toFixed(6)}
+                        </p>
+                        <div className="h-64 rounded-xl overflow-hidden">
+                            <MapContainer 
+                                center={[selectedAlert.lat, selectedAlert.lng]} 
+                                zoom={16} 
+                                style={{ height: '100%', width: '100%' }}
+                            >
+                                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                <Marker position={[selectedAlert.lat, selectedAlert.lng]} icon={customIcon} />
+                            </MapContainer>
+                        </div>
+                    </div>
+                    
+                    {/* Precisión GPS */}
+                    {selectedAlert.accuracy && (
+                        <div className="bg-white rounded-xl p-4 shadow-md">
+                            <p className="text-sm text-gray-500 mb-1">Precisión GPS</p>
+                            <p className="text-lg font-bold">±{Math.round(selectedAlert.accuracy)}m</p>
+                        </div>
+                    )}
+                    
+                    {/* Resuelta */}
+                    {selectedAlert.resolved_at && (
+                        <div className="bg-green-100 rounded-xl p-4 shadow-md">
+                            <p className="text-green-700 font-bold">✓ Resuelta el {formatDate(selectedAlert.resolved_at)}</p>
+                        </div>
+                    )}
+                </div>
+                
+                {/* Botón cerrar */}
+                <div className="p-4">
+                    <button 
+                        onClick={() => setSelectedAlert(null)}
+                        className="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-medium"
+                    >
+                        Cerrar
+                    </button>
+                </div>
             </div>
-            
-            <div className="space-y-1">
-              <p className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1">
-                <MapPin size={12} className="text-gray-400" />
-                Puesto: {item.puesto_numero || 'N/A'}
-              </p>
-              <p className="text-xs text-gray-400 flex items-center gap-1">
-                <Clock size={12} />
-                {formatDate(item.created_at)}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
+        );
+    }
 
-      {filteredHistory.length === 0 && (
-        <div className="text-center py-12">
-          <History className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 dark:text-gray-400">No hay alertas en el historial</p>
+    return (
+        <div className="min-h-screen bg-gray-50 p-4 pb-24">
+            <h1 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <HistoryIcon size={24} />
+                Historial
+            </h1>
+            
+            {loading ? (
+                <div className="flex justify-center py-12">
+                    <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+            ) : alertas.length === 0 ? (
+                <div className="text-center py-12">
+                    <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">No hay alertas</p>
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    {alertas.map((alerta) => {
+                        const isInsecurity = alerta.tipo === 'insecurity';
+                        return (
+                            <button
+                                key={alerta.id}
+                                onClick={() => setSelectedAlert(alerta)}
+                                className="w-full bg-white rounded-xl p-4 shadow-md text-left hover:bg-gray-50 transition-colors"
+                            >
+                                <div className="flex items-start gap-3">
+                                    <div className={`w-12 h-12 ${getTipoColor(alerta.tipo)} rounded-full flex items-center justify-center text-white text-xl`}>
+                                        {getTipoIcon(alerta.tipo)}
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="font-bold text-gray-800">
+                                                {isInsecurity ? 'Inseguridad' : 'Emergencia Médica'}
+                                            </span>
+                                            {getStatusBadge(alerta.status)}
+                                        </div>
+                                        <p className="text-sm text-gray-500 flex items-center gap-1">
+                                            <Clock size={14} />
+                                            {formatDate(alerta.created_at)}
+                                        </p>
+                                        <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                                            <MapPin size={12} />
+                                            {alerta.lat?.toFixed(4)}, {alerta.lng?.toFixed(4)}
+                                        </p>
+                                    </div>
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 }
