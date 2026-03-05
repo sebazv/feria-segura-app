@@ -127,12 +127,36 @@ export default function LoadingPage() {
     const mapCenter = location ? [location.lat, location.lng] : [-33.4489, -70.6693];
 
     if (sent) {
+        const sentMapCenter = location ? [location.lat, location.lng] : [-33.4489, -70.6693];
+        
         return (
             <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
                 <div style={{ backgroundColor: headerColor, padding: '20px' }}><h1 style={{ color: 'white', fontSize: '24px', fontWeight: 'bold', textAlign: 'center' }}>{isInsecurity ? '🛡️ ALERTA ENVIADA' : '🏥 EMERGENCIA ENVIADA'}</h1></div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px' }}>
-                    <div style={{ width: '100px', height: '100px', backgroundColor: '#22c55e', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}><span style={{ fontSize: '50px' }}>✓</span></div>
-                    <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1f2937' }}>¡Alerta Enviada!</h2>
+                
+                {/* Mapa de la ubicación */}
+                <div style={{ margin: '16px', borderRadius: '16px', overflow: 'hidden', height: '300px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+                    <MapContainer center={sentMapCenter} zoom={16} style={{ height: '100%', width: '100%' }}>
+                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                        {location && <Marker position={[location.lat, location.lng]} icon={customIcon} />}
+                    </MapContainer>
+                </div>
+                
+                {/* Coordenadas */}
+                <div style={{ backgroundColor: '#dbeafe', padding: '12px', margin: '0 16px 16px', borderRadius: '12px' }}>
+                    <p style={{ fontSize: '14px', color: '#1e40af', fontFamily: 'monospace', textAlign: 'center' }}>
+                        📍 {location?.lat?.toFixed(6)}, {location?.lng?.toFixed(6)}
+                    </p>
+                    {location?.accuracy && (
+                        <p style={{ fontSize: '12px', color: '#6b7280', textAlign: 'center', marginTop: '4px' }}>
+                            Precisión: ±{Math.round(location.accuracy)}m
+                        </p>
+                    )}
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div style={{ width: '80px', height: '80px', backgroundColor: '#22c55e', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}><span style={{ fontSize: '40px' }}>✓</span></div>
+                    <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#1f2937' }}>¡Alerta Enviada!</h2>
+                    <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>Los administradores han sido notificados</p>
                 </div>
             </div>
         );
