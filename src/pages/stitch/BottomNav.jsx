@@ -4,7 +4,7 @@ import { Shield, MessageCircle, Newspaper, Vote, User, Sun, Moon } from 'lucide-
 import { supabase } from '../lib/supabase/client';
 
 export default function BottomNav() {
-    const [darkMode, setDarkMode] = useState(true);
+    const [darkMode, setDarkMode] = useState(true); // Default to dark mode
     const [user, setUser] = useState(null);
 
     useEffect(() => {
@@ -15,6 +15,7 @@ export default function BottomNav() {
             try {
                 const data = JSON.parse(savedUserData);
                 setUser({ id: savedUserId });
+                // Default to dark mode, only use saved preference if explicitly false
                 setDarkMode(data.modo_oscuro !== false);
             } catch (e) {}
         }
@@ -22,14 +23,15 @@ export default function BottomNav() {
 
     const toggleDarkMode = async () => {
         const newMode = !darkMode;
-        setDarkMode(newMode);
         
-        // Apply immediately
+        // Update immediately - toggle from current state
         if (newMode) {
             document.documentElement.classList.add('dark');
         } else {
             document.documentElement.classList.remove('dark');
         }
+        
+        setDarkMode(newMode);
         
         // Save to database
         if (user?.id) {
