@@ -20,6 +20,39 @@ export default function EncuestasPage() {
         }
     }, [userData]);
 
+    const getOpciones = (encuesta) => {
+        // Handle both string and array formats
+        if (Array.isArray(encuesta.opciones)) {
+            return encuesta.opciones;
+        }
+        if (typeof encuesta.opciones === 'string') {
+            try {
+                return JSON.parse(encuesta.opciones);
+            } catch (e) {
+                return [];
+            }
+        }
+        return [];
+    };
+
+    const getVotos = (encuesta) => {
+        // Handle both string and object formats
+        if (Array.isArray(encuesta.votos)) {
+            return encuesta.votos;
+        }
+        if (typeof encuesta.votos === 'string') {
+            try {
+                return JSON.parse(encuesta.votos);
+            } catch (e) {
+                return [];
+            }
+        }
+        if (typeof encuesta.votos === 'object') {
+            return Object.entries(encuesta.votos || {}).map(([key, value]) => ({ opcion: key, votos: value }));
+        }
+        return [];
+    };
+
     const loadEncuestas = async () => {
         const result = await getEncuestas();
         if (result.success) {
@@ -29,10 +62,8 @@ export default function EncuestasPage() {
                     const voteResult = await getEncuestaConVotos(encuesta.id);
                     return {
                         ...encuesta,
-                        opciones: typeof encuesta.opciones === 'string' 
-                            ? JSON.parse(encuesta.opciones) 
-                            : encuesta.opciones,
-                        votos: voteResult.success ? voteResult.votos : []
+                        opciones: getOpciones(encuesta),
+                        votos: voteResult.success ? getVotos(voteResult) : []
                     };
                 })
             );
@@ -215,7 +246,7 @@ export default function EncuestasPage() {
                                 </div>
                                 
                                 <div className="space-y-2">
-                                    {encuesta.opciones?.map((opcion, index) => {
+                                    {getOpciones(encuesta).map((opcion, index) => {
                                         const porcentaje = getPorcentaje(encuesta.votos, opcion);
                                         const userVotedOption = encuesta.votos?.find(
                                             v => v.user_id === user?.id && v.opcion === opcion

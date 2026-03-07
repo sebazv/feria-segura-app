@@ -51,6 +51,25 @@ export default function PollManagerPage() {
         }
     };
 
+    // Helper to parse opciones
+    const getOpciones = (poll) => {
+        if (Array.isArray(poll.opciones)) return poll.opciones;
+        if (typeof poll.opciones === 'string') {
+            try { return JSON.parse(poll.opciones); } catch { return []; }
+        }
+        return [];
+    };
+
+    // Helper to get votes
+    const getPollVotes = (poll) => {
+        if (!poll.votes) return {};
+        if (typeof poll.votes === 'object') return poll.votes;
+        if (typeof poll.votes === 'string') {
+            try { return JSON.parse(poll.votes); } catch { return {}; }
+        }
+        return {};
+    };
+
     const handleOptionChange = (index, value) => {
         const newOptions = [...options];
         newOptions[index] = value;
@@ -128,8 +147,9 @@ export default function PollManagerPage() {
     };
 
     const getTotalVotes = (poll) => {
-        if (!poll.votes) return 0;
-        return Object.values(poll.votes).reduce((a, b) => a + b, 0);
+        const votes = getPollVotes(poll);
+        if (!votes) return 0;
+        return Object.values(votes).reduce((a, b) => a + (Number(b) || 0), 0);
     };
 
     if (!userData?.role || userData.role !== 'admin') {
@@ -277,8 +297,8 @@ export default function PollManagerPage() {
                                 
                                 {/* Options with votes */}
                                 <div className="space-y-2">
-                                    {poll.opciones?.map((opt, idx) => {
-                                        const votes = poll.votes?.[idx] || 0;
+                                    {getOpciones(poll).map((opt, idx) => {
+                                        const votes = getPollVotes(poll)[idx] || 0;
                                         const percentage = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
                                         
                                         return (

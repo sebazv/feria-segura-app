@@ -1,65 +1,98 @@
 import { useState, useEffect } from 'react';
-import { Vote, CheckCircle, Loader, Circle } from 'lucide-react';
-import { getEncuestas, getEncuestaConVotos, voteEncuesta } from '../../lib/comunidad';
+import { Vote, Plus, Loader, Check, BarChart3 } from 'lucide-react';
+import { getEncuestas, getEncuestaConVotos, voteEncuesta, createEncuesta } from '../../lib/comunidad';
 import { useAuth } from '../../lib/auth';
 
 export default function EncuestasPage() {
     const [encuestas, setEncuestas] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [selectedEncuesta, setSelectedEncuesta] = useState(null);
-    const [votos, setVotos] = useState([]);
-    const [voting, setVoting] = useState(null);
-    const [voted, setVoted] = useState({});
-    const { user } = useAuth();
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [showForm, setShowForm] = useState(false);
+    const [newEncuesta, setNewEncuesta] = useState({ pregunta: '', opciones: '' });
+    const [saving, setSaving] = useState(false);
+    const [votedIds, setVotedIds] = useState(new Set());
+    const { user, userData } = useAuth();
 
     useEffect(() => {
-        const loadEncuestas = async () => {
-            const result = await getEncuestas();
-            if (result.success) {
-                setEncuestas(result.encuestas);
-                
-                // Check which ones user has voted
-                const votedMap = {};
-                for (const enc of result.encuestas) {
-                    const detalle = await getEncuestaConVotos(enc.id);
-                    if (detalle.success) {
-                        const userVote = detalle.votos.find(v => v.user_id === user?.id);
-                        if (userVote) votedMap[enc.id] = userVote.opcion;
-                    }
-                }
-                setVoted(votedMap);
-            }
-            setLoading(false);
-        };
-
         loadEncuestas();
-    }, [user]);
+        if (userData?.role === 'admin') {
+            setIsAdmin(true);
+        }
+    }, [userData]);
 
-    const handleVerVotos = async (encuestaId) => {
-        if (selectedEncuesta === encuestaId) {
-            setSelectedEncuesta(null);
-            return;
+    const getOpciones = (encuesta) => {
+        // Handle both string and array formats
+        if (Array.isArray(encuesta.opciones)) {
+            return encuesta.opciones;
         }
-        
-        const result = await getEncuestaConVotos(encuestaId);
-        if (result.success) {
-            setVotos(result.votos);
-            setSelectedEncuesta(encuestaId);
+        if (typeof encuesta.opciones === 'string') {
+            try {
+                return JSON.parse(encuesta.opciones);
+            } catch (e) {
+                return [];
+            }
         }
+        return [];
     };
 
-    const handleVotar = async (encuestaId, opcion) => {
-        if (!user) {
-            alert('Debes iniciar sesión para votar');
-            return;
+    const getVotos = (encuesta) => {
+        // Handle both string and object formats
+        if (Array.isArray(encuesta.votos)) {
+            return encuesta.votos;
         }
-
-        if (voted[encuestaId]) {
-            alert('Ya has votado en esta encuesta');
-            return;
+        if (typeof encuesta.votos === 'string') {
+            try {
+                return JSON.parse(encuesta.votos);
+            } catch (e) {
+                return [];
+            }
         }
+        if (typeof encuesta.votos === 'object') {
+            return Object.entries(encuesta.votos || {}).map(([key, value]) => ({ opcion: key, votos: value }));
+        }
+        return [];
+    };
 
-        setVoting(opcion);
+    const loadEncuestas = async () => {
+        const result = await getEncuestas();
+        if (result.success) {
+            // Load votes for each survey
+            const encuestasConVotos = await Promise.all(
+                result.encuestas.map(async (encuesta) => {
+                    const voteResult = await getEncuestaConVotos(encuesta.id);
+                    return {
+                        ...encuesta,
+                        opciones: getOpciones(encuesta),
+                        votos: voteResult.success ? getVotos(voteResult) : []
+                    };
+                })
+            );
+                        ...encuesta,
+                        opciones: typeof encuesta.opciones === 'string' 
+                            ? JSON.parse(encuesta.opciones) 
+                            : encuesta.opciones,
+                        votos: voteResult.success ? voteResult.votos : []
+                    };
+                })
+            );
+            setEncuestas(encuestasConVotos);
+            
+            // Check which surveys user has voted on
+            if (user) {
+                const voted = new Set();
+                encuestasConVotos.forEach(encuesta => {
+                    const userVoted = encuesta.votos?.some(v => v.user_id === user.id);
+                    if (userVoted) voted.add(encuesta.id);
+                });
+                setVotedIds(voted);
+            }
+        }
+        setLoading(false);
+    };
+
+    const handleVote = async (encuestaId, opcion) => {
+        if (!user) return;
+        
         const result = await voteEncuesta({
             encuestaId,
             userId: user.id,
@@ -67,128 +100,218 @@ export default function EncuestasPage() {
         });
 
         if (result.success) {
-            setVoted({ ...voted, [encuestaId]: opcion });
-            handleVerVotos(encuestaId);
+            setVotedIds(new Set([...votedIds, encuestaId]));
+            loadEncuestas(); // Reload to show updated votes
         } else {
             alert(result.error || 'Error al votar');
         }
-        setVoting(null);
     };
 
-    const getResultados = (opciones) => {
-        if (!selectedEncuesta || votos.length === 0) return null;
-        
-        const opts = typeof opciones === 'string' ? JSON.parse(opciones) : opciones;
-        const total = votos.length;
-        
-        return opts.map(opcion => {
-            const count = votos.filter(v => v.opcion === opcion).length;
-            const porcentaje = total > 0 ? Math.round((count / total) * 100) : 0;
-            return { opcion, count, porcentaje };
+    const handleCreateEncuesta = async (e) => {
+        e.preventDefault();
+        if (!newEncuesta.pregunta.trim() || !newEncuesta.opciones.trim()) return;
+
+        const opciones = newEncuesta.opciones
+            .split('\n')
+            .map(o => o.trim())
+            .filter(o => o.length > 0);
+
+        if (opciones.length < 2) {
+            alert('Agrega al menos 2 opciones');
+            return;
+        }
+
+        setSaving(true);
+        const result = await createEncuesta({
+            pregunta: newEncuesta.pregunta.trim(),
+            opciones,
+            autorId: user.id
         });
+
+        if (result.success) {
+            loadEncuestas();
+            setNewEncuesta({ pregunta: '', opciones: '' });
+            setShowForm(false);
+        }
+        setSaving(false);
+    };
+
+    const getTotalVotos = (votos) => {
+        return votos?.length || 0;
+    };
+
+    const getOpcionVotos = (votos, opcion) => {
+        return votos?.filter(v => v.opcion === opcion).length || 0;
+    };
+
+    const getPorcentaje = (votos, opcion) => {
+        const total = getTotalVotos(votos);
+        if (total === 0) return 0;
+        return Math.round((getOpcionVotos(votos, opcion) / total) * 100);
     };
 
     if (loading) {
         return (
-            <div className="p-4 pb-24 bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center">
+            <div className="p-4 pb-24 bg-gray-50 min-h-screen flex items-center justify-center">
                 <Loader className="w-8 h-8 animate-spin text-red-600" />
             </div>
         );
     }
 
     return (
-        <div className="p-4 pb-24 bg-gray-50 dark:bg-gray-900 min-h-screen">
-            <header className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-1">
-                    Encuestas
-                </h1>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
-                    Votaciones y consultas al gremio
-                </p>
+        <div className="p-4 pb-24 bg-gray-50 min-h-screen">
+            <header className="mb-4 flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-800 mb-1 flex items-center gap-2">
+                        🗳️ Encuestas
+                    </h1>
+                    <p className="text-gray-500 text-sm">
+                        Vota y participa
+                    </p>
+                </div>
+                {isAdmin && (
+                    <button 
+                        onClick={() => setShowForm(!showForm)}
+                        className="bg-red-600 text-white p-2 rounded-full shadow-lg"
+                    >
+                        <Plus size={24} />
+                    </button>
+                )}
             </header>
 
+            {/* Admin: Create Poll Form */}
+            {showForm && isAdmin && (
+                <div className="bg-white rounded-xl p-4 mb-4 shadow-lg">
+                    <h3 className="font-bold text-gray-800 mb-3">Nueva Encuesta</h3>
+                    <form onSubmit={handleCreateEncuesta} className="space-y-3">
+                        <input
+                            type="text"
+                            value={newEncuesta.pregunta}
+                            onChange={(e) => setNewEncuesta({ ...newEncuesta, pregunta: e.target.value })}
+                            placeholder="Pregunta de la encuesta"
+                            className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                        />
+                        <textarea
+                            value={newEncuesta.opciones}
+                            onChange={(e) => setNewEncuesta({ ...newEncuesta, opciones: e.target.value })}
+                            placeholder="Opciones (una por línea)"
+                            rows={4}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                        />
+                        <div className="flex gap-2">
+                            <button
+                                type="submit"
+                                disabled={saving}
+                                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white py-2 rounded-lg font-medium"
+                            >
+                                {saving ? 'Creando...' : 'Crear Encuesta'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setShowForm(false)}
+                                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {/* Polls List */}
             <div className="space-y-4">
-                {encuestas.map((encuesta) => {
-                    const opciones = typeof encuesta.opciones === 'string' ? JSON.parse(encuesta.opciones) : encuesta.opciones;
-                    const yaVotado = voted[encuesta.id];
-                    const resultados = selectedEncuesta === encuesta.id ? getResultados(encuesta.opciones) : null;
-
-                    return (
-                        <div 
-                            key={encuesta.id}
-                            className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700 overflow-hidden"
-                        >
-                            <div className="bg-purple-600 px-4 py-2 flex items-center gap-2">
-                                <Vote className="w-4 h-4 text-white" />
-                                <span className="text-white font-semibold text-sm">ENCUESTA</span>
-                            </div>
-                            
-                            <div className="p-4">
-                                <h2 className="text-lg font-bold text-gray-800 dark:text-white mb-4">
-                                    {encuesta.pregunta}
-                                </h2>
-
-                                {yaVotado ? (
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
-                                            <CheckCircle size={16} />
-                                            <span>Ya has votado: {yaVotado}</span>
-                                        </div>
+                {encuestas.length === 0 ? (
+                    <div className="bg-white rounded-xl p-8 text-center">
+                        <Vote className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500">No hay encuestas activas</p>
+                        {isAdmin && (
+                            <button 
+                                onClick={() => setShowForm(true)}
+                                className="text-red-600 font-medium mt-2"
+                            >
+                                Crear primera encuesta
+                            </button>
+                        )}
+                    </div>
+                ) : (
+                    encuestas.map((encuesta) => {
+                        const hasVoted = votedIds.has(encuesta.id);
+                        const totalVotos = getTotalVotos(encuesta.votos);
+                        
+                        return (
+                            <div 
+                                key={encuesta.id} 
+                                className="bg-white rounded-xl p-4 shadow-md"
+                            >
+                                <div className="flex items-center justify-between mb-3">
+                                    <h2 className="font-bold text-lg text-gray-800 flex-1">
+                                        {encuesta.pregunta}
+                                    </h2>
+                                    <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                                        <BarChart3 size={12} />
+                                        {totalVotos} voto{totalVotos !== 1 ? 's' : ''}
+                                    </span>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                    {getOpciones(encuesta).map((opcion, index) => {
+                                        const porcentaje = getPorcentaje(encuesta.votos, opcion);
+                                        const userVotedOption = encuesta.votos?.find(
+                                            v => v.user_id === user?.id && v.opcion === opcion
+                                        );
                                         
-                                        <button 
-                                            onClick={() => handleVerVotos(encuesta.id)}
-                                            className="text-purple-600 text-sm underline"
-                                        >
-                                            {selectedEncuesta === encuesta.id ? 'Ocultar' : 'Ver'} resultados
-                                        </button>
-
-                                        {resultados && (
-                                            <div className="mt-3 space-y-2">
-                                                {resultados.map((r, i) => (
-                                                    <div key={i}>
-                                                        <div className="flex justify-between text-sm mb-1">
-                                                            <span className="text-gray-600 dark:text-gray-300">{r.opcion}</span>
-                                                            <span className="font-medium">{r.porcentaje}% ({r.count})</span>
-                                                        </div>
-                                                        <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                                            <div 
-                                                                className="h-full bg-purple-500 rounded-full"
-                                                                style={{ width: `${r.porcentaje}%` }}
-                                                            ></div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                                <p className="text-xs text-gray-400 text-right mt-1">{votos.length} votos totales</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        {opciones.map((opcion, i) => (
+                                        return (
                                             <button
-                                                key={i}
-                                                onClick={() => handleVotar(encuesta.id, opcion)}
-                                                disabled={voting}
-                                                className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:border-purple-500 transition-colors flex items-center justify-between"
+                                                key={index}
+                                                onClick={() => !hasVoted && handleVote(encuesta.id, opcion)}
+                                                disabled={hasVoted}
+                                                className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
+                                                    hasVoted 
+                                                        ? userVotedOption 
+                                                            ? 'border-green-500 bg-green-50' 
+                                                            : 'border-gray-200'
+                                                        : 'border-gray-200 hover:border-red-300 hover:bg-red-50'
+                                                }`}
                                             >
-                                                <span>{opcion}</span>
-                                                {voting === opcion && (
-                                                    <Loader className="w-4 h-4 animate-spin" />
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <span className="font-medium text-gray-800">
+                                                        {opcion}
+                                                        {userVotedOption && (
+                                                            <Check size={16} className="inline ml-2 text-green-600" />
+                                                        )}
+                                                    </span>
+                                                    {hasVoted && (
+                                                        <span className="text-sm font-bold text-gray-600">
+                                                            {porcentaje}%
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {hasVoted && (
+                                                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                        <div 
+                                                            className="h-full bg-red-500 rounded-full transition-all"
+                                                            style={{ width: `${porcentaje}%` }}
+                                                        />
+                                                    </div>
                                                 )}
                                             </button>
-                                        ))}
-                                    </div>
+                                        );
+                                    })}
+                                </div>
+                                
+                                {hasVoted && (
+                                    <p className="text-center text-green-600 text-sm mt-3 font-medium">
+                                        ✓ Ya has votado en esta encuesta
+                                    </p>
+                                )}
+                                {!user && !hasVoted && (
+                                    <p className="text-center text-gray-500 text-sm mt-3">
+                                        Inicia sesión para votar
+                                    </p>
                                 )}
                             </div>
-                        </div>
-                    );
-                })}
-
-                {encuestas.length === 0 && (
-                    <div className="text-center py-12">
-                        <Vote className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-gray-500 dark:text-gray-400">No hay encuestas activas</p>
-                    </div>
+                        );
+                    })
                 )}
             </div>
         </div>
