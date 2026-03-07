@@ -21,6 +21,8 @@ import Attendance from './pages/original/Attendance';
 import AttendanceHistory from './pages/original/AttendanceHistory';
 import NewsManager from './pages/original/NewsManager';
 import PollManager from './pages/original/PollManager';
+import VigilanteDashboard from './pages/original/VigilanteDashboard';
+import CreateVigilante from './pages/original/CreateVigilante';
 
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminAlerts from './pages/admin/Alerts';
@@ -82,6 +84,8 @@ export default function App() {
                         <Route path="/attendance-history" element={<ProtectedRoute><AttendanceHistory /></ProtectedRoute>} />
                         <Route path="/news-manager" element={<ProtectedRoute requireAdmin><NewsManager /></ProtectedRoute>} />
                         <Route path="/poll-manager" element={<ProtectedRoute requireAdmin><PollManager /></ProtectedRoute>} />
+                        <Route path="/vigilante" element={<ProtectedRoute><VigilanteDashboard /></ProtectedRoute>} />
+                        <Route path="/create-vigilante" element={<ProtectedRoute requireAdmin><CreateVigilante /></ProtectedRoute>} />
                         
                         <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
                         <Route path="/admin/alerts" element={<ProtectedRoute requireAdmin><AdminAlerts /></ProtectedRoute>} />

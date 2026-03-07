@@ -49,8 +49,12 @@ export default function Login() {
             // Save user to localStorage and state
             login(usuario.id, usuario);
             
-            // Navigate to home
-            navigate('/');
+            // Navigate based on role
+            if (usuario.role === 'vigilante') {
+                navigate('/vigilante');
+            } else {
+                navigate('/');
+            }
 
         } catch (err) {
             console.error('Login error:', err);

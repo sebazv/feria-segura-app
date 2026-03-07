@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Shield, Bell, Settings, Clock, Trash2, AlertTriangle, Edit2, X, BarChart3, Download, Calendar, Newspaper, Vote } from 'lucide-react';
+import { ArrowLeft, User, Shield, Bell, Settings, Clock, Trash2, AlertTriangle, Edit2, X, BarChart3, Download, Calendar, Newspaper, Vote, ShieldPlus } from 'lucide-react';
 import { supabase } from '../../lib/supabase/client';
 import InstallAppButton from '../../components/InstallAppButton';
 
@@ -323,6 +323,10 @@ export default function ProfilePage() {
                 
                 {isAdmin && (
                     <>
+                        <button onClick={() => navigate('/create-vigilante')} className="w-full flex items-center gap-3 p-4 hover:bg-white/5 border-b border-white/10">
+                            <ShieldPlus className="w-5 h-5 text-blue-400" />
+                            <span className="text-white">Crear Vigilante</span>
+                        </button>
                         <button onClick={() => navigate('/reports')} className="w-full flex items-center gap-3 p-4 hover:bg-white/5 border-b border-white/10">
                             <BarChart3 className="w-5 h-5 text-purple-400" />
                             <span className="text-white">Reportes</span>
