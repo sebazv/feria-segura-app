@@ -17,6 +17,10 @@ import EmergencyContacts from './pages/original/EmergencyContacts';
 import Settings from './pages/original/Settings';
 import Sessions from './pages/original/Sessions';
 import Reports from './pages/original/Reports';
+import Attendance from './pages/original/Attendance';
+import AttendanceHistory from './pages/original/AttendanceHistory';
+import NewsManager from './pages/original/NewsManager';
+import PollManager from './pages/original/PollManager';
 
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminAlerts from './pages/admin/Alerts';
@@ -74,6 +78,10 @@ export default function App() {
                         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                         <Route path="/sessions" element={<ProtectedRoute><Sessions /></ProtectedRoute>} />
                         <Route path="/reports" element={<ProtectedRoute requireAdmin><Reports /></ProtectedRoute>} />
+                        <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
+                        <Route path="/attendance-history" element={<ProtectedRoute><AttendanceHistory /></ProtectedRoute>} />
+                        <Route path="/news-manager" element={<ProtectedRoute requireAdmin><NewsManager /></ProtectedRoute>} />
+                        <Route path="/poll-manager" element={<ProtectedRoute requireAdmin><PollManager /></ProtectedRoute>} />
                         
                         <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
                         <Route path="/admin/alerts" element={<ProtectedRoute requireAdmin><AdminAlerts /></ProtectedRoute>} />

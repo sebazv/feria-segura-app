@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Heart, User, Clock, Bell, MapPin, AlertTriangle, Download } from 'lucide-react';
+import { Shield, Heart, User, Clock, Bell, MapPin, AlertTriangle, Download, Calendar, CheckCircle } from 'lucide-react';
 import InstallAppButton from '../../components/InstallAppButton';
 
 export default function Home() {
@@ -188,11 +188,25 @@ export default function Home() {
                 {userData && (
                     <div className="mt-6 grid grid-cols-2 gap-3">
                         <button 
+                            onClick={() => navigate('/attendance')}
+                            className="bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 rounded-2xl p-4 flex flex-col items-center gap-2 transition-colors"
+                        >
+                            <CheckCircle className="w-6 h-6 text-emerald-400" />
+                            <span className="text-white font-medium text-sm">Asistencia</span>
+                        </button>
+                        <button 
+                            onClick={() => navigate('/attendance-history')}
+                            className="bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-2xl p-4 flex flex-col items-center gap-2 transition-colors"
+                        >
+                            <Calendar className="w-6 h-6 text-slate-300" />
+                            <span className="text-white font-medium text-sm">Mi Historial</span>
+                        </button>
+                        <button 
                             onClick={() => navigate('/history')}
                             className="bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-2xl p-4 flex flex-col items-center gap-2 transition-colors"
                         >
                             <Clock className="w-6 h-6 text-slate-300" />
-                            <span className="text-white font-medium text-sm">Historial</span>
+                            <span className="text-white font-medium text-sm">Alertas</span>
                         </button>
                         <button 
                             onClick={() => navigate('/contacts')}

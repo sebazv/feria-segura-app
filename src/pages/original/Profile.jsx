@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Shield, Bell, Settings, Clock, Trash2, AlertTriangle, Edit2, X, BarChart3, Download } from 'lucide-react';
+import { ArrowLeft, User, Shield, Bell, Settings, Clock, Trash2, AlertTriangle, Edit2, X, BarChart3, Download, Calendar, Newspaper, Vote } from 'lucide-react';
 import { supabase } from '../../lib/supabase/client';
 import InstallAppButton from '../../components/InstallAppButton';
 
@@ -301,6 +301,16 @@ export default function ProfilePage() {
                     <span className="text-white">Contactos de Emergencia</span>
                 </button>
                 
+                <button onClick={() => navigate('/attendance')} className="w-full flex items-center gap-3 p-4 hover:bg-white/5 border-b border-white/10">
+                    <Clock className="w-5 h-5 text-emerald-400" />
+                    <span className="text-white">Registrar Asistencia</span>
+                </button>
+                
+                <button onClick={() => navigate('/attendance-history')} className="w-full flex items-center gap-3 p-4 hover:bg-white/5 border-b border-white/10">
+                    <Calendar className="w-5 h-5 text-blue-400" />
+                    <span className="text-white">Mi Asistencia</span>
+                </button>
+                
                 <button onClick={() => navigate('/settings')} className="w-full flex items-center gap-3 p-4 hover:bg-white/5 border-b border-white/10">
                     <Settings className="w-5 h-5 text-slate-400" />
                     <span className="text-white">Configuración</span>
@@ -317,9 +327,13 @@ export default function ProfilePage() {
                             <BarChart3 className="w-5 h-5 text-purple-400" />
                             <span className="text-white">Reportes</span>
                         </button>
-                        <button onClick={() => navigate('/users')} className="w-full flex items-center gap-3 p-4 hover:bg-white/5">
-                            <User className="w-5 h-5 text-purple-400" />
-                            <span className="text-white">Gestionar Usuarios</span>
+                        <button onClick={() => navigate('/news-manager')} className="w-full flex items-center gap-3 p-4 hover:bg-white/5 border-b border-white/10">
+                            <Newspaper className="w-5 h-5 text-blue-400" />
+                            <span className="text-white">Gestionar Noticias</span>
+                        </button>
+                        <button onClick={() => navigate('/poll-manager')} className="w-full flex items-center gap-3 p-4 hover:bg-white/5">
+                            <Vote className="w-5 h-5 text-amber-400" />
+                            <span className="text-white">Gestionar Encuestas</span>
                         </button>
                     </>
                 )}
