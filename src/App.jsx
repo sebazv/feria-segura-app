@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth';
 import BottomNav from './components/BottomNav';
+import DarkModeProvider from './components/DarkModeProvider';
 
 import Home from './pages/original/Home';
 import Login from './pages/Login';
@@ -27,10 +28,10 @@ import AdminNotifications from './pages/admin/Notifications';
 function AppLayout({ children }) {
     const { user, userData } = useAuth();
     return (
-        <>
+        <DarkModeProvider>
             {children}
             {user && userData?.estado === 'ACTIVO' && <BottomNav />}
-        </>
+        </DarkModeProvider>
     );
 }
 
