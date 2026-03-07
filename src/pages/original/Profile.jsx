@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { User, Trash2, AlertTriangle, Edit2, X, BarChart3, Clock, Bell, Shield, Settings } from 'lucide-react';
 import { supabase } from '../../lib/supabase/client';
 
+import InstallAppButton from '../../components/InstallAppButton';
 export default function ProfilePage() {
     const navigate = useNavigate();
     const [userData, setUserData] = useState(null);
@@ -341,6 +342,8 @@ export default function ProfilePage() {
             </div>
             
             <p className="text-center text-gray-400 text-xs mt-6">Feria Segura v1.0.0</p>
+            
+            <InstallAppButton />
         </div>
     );
 }

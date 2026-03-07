@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Heart, User, Clock, Bell, MapPin, AlertTriangle } from 'lucide-react';
+import { Shield, Heart, User, Clock, Bell, MapPin, AlertTriangle, Download } from 'lucide-react';
+import InstallAppButton from '../../components/InstallAppButton';
 
 export default function Home() {
     const navigate = useNavigate();
@@ -203,6 +204,9 @@ export default function Home() {
                     </div>
                 )}
             </main>
+
+            {/* Install App Button */}
+            <InstallAppButton />
 
             {/* Decorative elements */}
             <div className="fixed top-20 left-0 w-64 h-64 bg-red-500/10 rounded-full blur-3xl -translate-x-1/2"></div>
